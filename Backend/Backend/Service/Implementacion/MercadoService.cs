@@ -36,13 +36,17 @@ public class MercadoService : IMercadoService
     {
         var mercados = await _repository.GetAllAsync();
         var clientes = await _repository.ContarClientesPorMercadoAsync();
-        return mercados.Select(m => MapToResponse(m, clientes.GetValueOrDefault(m.Id))).ToList();
+        var resumen = await _repository.ResumenPorMercadoAsync(InicioDelMesUtc());
+        return mercados.Select(m => MapToResponse(m, clientes.GetValueOrDefault(m.Id), resumen.GetValueOrDefault(m.Id))).ToList();
     }
 
     public async Task<MercadoResponse> GetByIdAsync(int id)
     {
         var mercado = await GetOrThrowAsync(id);
-        return MapToResponse(mercado, await _repository.ContarClientesAsync(id));
+        return MapToResponse(
+            mercado,
+            await _repository.ContarClientesAsync(id),
+            (await _repository.ResumenPorMercadoAsync(InicioDelMesUtc(), id)).GetValueOrDefault(id));
     }
 
     public async Task<MercadoResponse> CreateAsync(CreateMercadoRequest request)
@@ -87,7 +91,10 @@ public class MercadoService : IMercadoService
         mercado.Activo = request.Activo;
         await _repository.UpdateAsync(mercado);
 
-        var response = MapToResponse(mercado, await _repository.ContarClientesAsync(id));
+        var response = MapToResponse(
+            mercado,
+            await _repository.ContarClientesAsync(id),
+            (await _repository.ResumenPorMercadoAsync(InicioDelMesUtc(), id)).GetValueOrDefault(id));
         await _notificador.AvisarAsync("mercados", "actualizado", response);
         return response;
     }
@@ -116,13 +123,23 @@ public class MercadoService : IMercadoService
         return string.IsNullOrEmpty(limpio) ? null : limpio;
     }
 
-    private static MercadoResponse MapToResponse(Mercado m, int clientes) => new()
+    /// <summary>El primer día de este mes en Perú, como instante UTC.</summary>
+    private static DateTime InicioDelMesUtc()
+    {
+        var hoy = Zona.Hoy;
+        return Zona.AUtc(new DateTime(hoy.Year, hoy.Month, 1));
+    }
+
+    private static MercadoResponse MapToResponse(Mercado m, int clientes, ResumenMercado? resumen = null) => new()
     {
         Id = m.Id,
         Nombre = m.Nombre,
         Direccion = m.Direccion,
         Distrito = m.Distrito,
         Activo = m.Activo,
-        Clientes = clientes
+        Clientes = clientes,
+        Rutas = resumen?.Rutas ?? [],
+        VentasMes = resumen?.VentasMes ?? 0,
+        PorCobrar = resumen?.PorCobrar ?? 0,
     };
 }

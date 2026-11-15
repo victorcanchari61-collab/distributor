@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, ShieldCheck, Store } from 'lucide-react'
+import { HandCoins, Plus, ShieldCheck, Store, TrendingUp } from 'lucide-react'
 import { FaBan, FaCircleCheck, FaEye, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
@@ -21,6 +21,11 @@ import { mercadoApi } from './mercadoApi'
 import type { MercadoRequest, MercadoResponse } from './mercadoApi'
 
 const VACIO: MercadoRequest = { nombre: '', direccion: '', distrito: '' }
+
+const soles = (n: number) => `S/ ${n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const sinDato = <span className="text-ink-soft">—</span>
+/** Por número cuando lo son ("2" antes que "10"), y por nombre si no. */
+const ordenar = (lista: string[]) => [...lista].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }))
 
 /**
  * Dónde se entrega: un mercado de abastos, pero también puede ser una zona
@@ -149,6 +154,49 @@ export function MercadosPage() {
     // Un contador no se busca por texto: no hay control numerico en el panel.
     { key: 'clientes', label: 'Clientes', align: 'right', filterable: false },
     {
+      // Qué rutas llegan: se deduce de las rutas de sus clientes activos.
+      key: 'rutas',
+      label: 'Rutas',
+      width: 200,
+      filterType: 'select',
+      filterOptions: ordenar([...new Set(mercados.flatMap((m) => m.rutas))]).map((r) => ({ value: r, label: r })),
+      valores: (row) => row.rutas,
+      value: (row) => ordenar(row.rutas).join(', '),
+      render: (row) =>
+        row.rutas.length ? (
+          <span className="flex flex-wrap gap-1">
+            {ordenar(row.rutas).map((r) => (
+              <span key={r} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-ink">
+                {r}
+              </span>
+            ))}
+          </span>
+        ) : (
+          sinDato
+        ),
+    },
+    {
+      key: 'ventasMes',
+      label: 'Ventas del mes',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.ventasMes,
+      render: (row) => (row.ventasMes > 0 ? <span className="tabular-nums">{soles(row.ventasMes)}</span> : sinDato),
+    },
+    {
+      key: 'porCobrar',
+      label: 'Por cobrar',
+      align: 'right',
+      filterable: false,
+      value: (row) => row.porCobrar,
+      render: (row) =>
+        row.porCobrar > 0 ? (
+          <span className="font-semibold text-amber-700 tabular-nums">{soles(row.porCobrar)}</span>
+        ) : (
+          sinDato
+        ),
+    },
+    {
       key: 'activo',
       label: 'Estado',
       filterType: 'select',
@@ -164,6 +212,10 @@ export function MercadosPage() {
   ]
 
   const activos = mercados.filter((m) => m.activo)
+  const ventasMes = mercados.reduce((n, m) => n + m.ventasMes, 0)
+  const conVentas = mercados.filter((m) => m.ventasMes > 0).length
+  const porCobrar = mercados.reduce((n, m) => n + m.porCobrar, 0)
+  const conDeuda = mercados.filter((m) => m.porCobrar > 0).length
 
   return (
     <ListPage
@@ -196,6 +248,20 @@ export function MercadosPage() {
               label: activos.length > 0 ? `Ver los ${activos.length}` : 'Ver',
               onClick: () => verEstado('Activo'),
             }}
+          />
+          <StatCard
+            label="Ventas del mes"
+            value={soles(ventasMes)}
+            hint={conVentas === 1 ? 'en 1 mercado' : `en ${conVentas} mercados`}
+            icon={<TrendingUp size={18} />}
+            tono="success"
+          />
+          <StatCard
+            label="Por cobrar"
+            value={soles(porCobrar)}
+            hint={conDeuda === 1 ? '1 mercado con deuda' : `${conDeuda} mercados con deuda`}
+            icon={<HandCoins size={18} />}
+            tono={porCobrar > 0 ? 'warning' : 'neutral'}
           />
         </>
       }

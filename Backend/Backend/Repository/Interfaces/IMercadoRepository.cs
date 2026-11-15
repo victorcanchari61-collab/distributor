@@ -8,6 +8,9 @@ public interface IMercadoRepository
     Task<Dictionary<int, int>> ContarClientesPorMercadoAsync();
 
     Task<IEnumerable<Mercado>> GetAllAsync();
+
+    /// <summary>Rutas, ventas del mes y deuda de cada mercado (o de uno solo, con <paramref name="mercadoId"/>).</summary>
+    Task<Dictionary<int, ResumenMercado>> ResumenPorMercadoAsync(DateTime inicioMesUtc, int? mercadoId = null);
     Task<Mercado?> GetByIdAsync(int id);
     Task<bool> ExisteNombreAsync(string nombre, int? excepto = null);
 

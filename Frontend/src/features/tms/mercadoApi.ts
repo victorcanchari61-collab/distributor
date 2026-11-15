@@ -14,6 +14,12 @@ export interface MercadoResponse {
   activo: boolean
   /** Cuántos clientes ya lo usan. Si hay alguno, no se elimina. */
   clientes: number
+  /** Las rutas que llegan a él: las de sus clientes activos. */
+  rutas: string[]
+  /** Lo vendido este mes a sus clientes (S/). */
+  ventasMes: number
+  /** Lo que deben sus clientes en ventas al crédito (S/). */
+  porCobrar: number
 }
 
 export interface MercadoRequest {

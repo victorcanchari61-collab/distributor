@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Route, ShieldCheck } from 'lucide-react'
+import { HandCoins, Plus, Route, ShieldCheck, TrendingUp, UserX } from 'lucide-react'
 import { FaBan, FaCircleCheck, FaEye, FaPencil } from 'react-icons/fa6'
 import {
   Alert,
@@ -74,7 +74,9 @@ export function RutasPage() {
 
   // Las tarjetas llevan a lo que cuentan: "Ver las 8" pone ese filtro en "Estado".
   const [filtroPedido, setFiltroPedido] = useState<{ column: string; value: string; vez: number }>()
-  const verEstado = (value: string) => setFiltroPedido((f) => ({ column: 'activo', value, vez: (f?.vez ?? 0) + 1 }))
+  const verPor = (column: string, value: string) =>
+    setFiltroPedido((f) => ({ column, value, vez: (f?.vez ?? 0) + 1 }))
+  const verEstado = (value: string) => verPor('activo', value)
 
   const { confirmar, dialogo } = useConfirmacion()
 
@@ -271,6 +273,11 @@ export function RutasPage() {
   ]
 
   const activas = rutas.filter((r) => r.activo)
+  const sinVendedor = activas.filter((r) => r.vendedores.length === 0).length
+  const ventasMes = rutas.reduce((n, r) => n + r.ventasMes, 0)
+  const compraron = rutas.reduce((n, r) => n + r.clientesConCompraMes, 0)
+  const porCobrar = rutas.reduce((n, r) => n + r.porCobrar, 0)
+  const deben = rutas.reduce((n, r) => n + r.clientesConDeuda, 0)
 
   return (
     <ListPage
@@ -303,6 +310,32 @@ export function RutasPage() {
               label: activas.length > 0 ? `Ver las ${activas.length}` : 'Ver',
               onClick: () => verEstado('Activo'),
             }}
+          />
+          <StatCard
+            label="Sin vendedor"
+            value={String(sinVendedor)}
+            hint="activas sin nadie a cargo"
+            icon={<UserX size={18} />}
+            tono={sinVendedor > 0 ? 'warning' : 'success'}
+            progreso={activas.length > 0 ? sinVendedor / activas.length : 0}
+            accion={{
+              label: sinVendedor > 0 ? `Ver las ${sinVendedor}` : 'Ver',
+              onClick: () => verPor('vendedores', 'Sin vendedor'),
+            }}
+          />
+          <StatCard
+            label="Ventas del mes"
+            value={soles(ventasMes)}
+            hint={compraron === 1 ? '1 cliente compró' : `${compraron} clientes compraron`}
+            icon={<TrendingUp size={18} />}
+            tono="success"
+          />
+          <StatCard
+            label="Por cobrar"
+            value={soles(porCobrar)}
+            hint={deben === 1 ? '1 cliente debe' : `${deben} clientes deben`}
+            icon={<HandCoins size={18} />}
+            tono={porCobrar > 0 ? 'warning' : 'neutral'}
           />
         </>
       }
