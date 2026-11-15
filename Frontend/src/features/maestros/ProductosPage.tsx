@@ -17,6 +17,7 @@ import {
   RowAction,
   StatCard,
   Tabs,
+  VisorImagen,
   useConfirmacion,
   useToast,
   PestanasVista,
@@ -613,12 +614,15 @@ export function ProductosPage() {
       width: 64,
       render: (row) =>
         row.foto ? (
-          <img
-            src={urlImagen(row.foto)}
-            alt={row.nombre}
-            loading="lazy"
-            className="size-10 rounded-field border border-line object-cover"
-          />
+          // Al hacer clic, la foto crece desde aquí hasta una ventana.
+          <VisorImagen src={urlImagen(row.foto)} titulo={row.nombre} className="size-10">
+            <img
+              src={urlImagen(row.foto)}
+              alt={row.nombre}
+              loading="lazy"
+              className="size-10 rounded-field border border-line object-cover"
+            />
+          </VisorImagen>
         ) : (
           <span className="grid size-10 place-items-center rounded-field border border-dashed border-line text-ink-soft">
             <ImageOff size={16} />
@@ -891,163 +895,176 @@ export function ProductosPage() {
 
             {pestanaForm === 'datos' ? (
               <div className="flex flex-col gap-4">
-                <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
-                  <Input
-                    label="Código"
-                    placeholder="AZ-RUB"
-                    value={form.codigo}
-                    onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-                  />
-                  <Input
-                    label="Nombre"
-                    placeholder="Azúcar rubia"
-                    value={form.nombre}
-                    onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                  />
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {/* El + crea la categoria sin salir del formulario: si no
-                      existe, no hay que perder lo escrito para ir a crearla. */}
-                  <Desplegable
-                    label="Categoría"
-                    optional
-                    hint={
-                      <BotonMas label="Nueva categoría" onClick={() => setCrearRapido('categoria')} />
-                    }
-                    value={form.categoriaId}
-                    onChange={(v) => setForm({ ...form, categoriaId: Number(v) })}
-                    options={[
-                      { value: 0, label: 'Sin categoría' },
-                      ...categorias
-                        .filter((c) => c.activo)
-                        .map((c) => ({ value: c.id, label: c.nombre })),
-                    ]}
-                  />
-
-                  <Desplegable
-                    label="Marca"
-                    optional
-                    hint={<BotonMas label="Nueva marca" onClick={() => setCrearRapido('marca')} />}
-                    value={form.marcaId}
-                    onChange={(v) => setForm({ ...form, marcaId: Number(v) })}
-                    options={[
-                      { value: 0, label: 'Sin marca' },
-                      ...marcas
-                        .filter((m) => m.activo)
-                        .map((m) => ({ value: m.id, label: m.nombre })),
-                    ]}
-                  />
-                </div>
-
                 {/*
-                  Los cuatro numeros del producto, en dos filas de dos.
-
-                  Los tres que se escriben por presentacion llevan el selector al lado del numero,
-                  no debajo, para que todas las celdas midan lo mismo y la rejilla no salga
-                  descuadrada segun cuantas presentaciones tenga cada uno.
+                  Arriba, quién es el producto: la foto a la izquierda, como un recuadro donde se hace clic o se
+                  suelta la imagen, y a su lado lo que lo identifica. Abajo, aparte, los números con los que se
+                  calcula. Antes la foto quedaba suelta entre los precios y la descripción.
                 */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {/* Se escribe como lo cobra el proveedor y se guarda por
-                      unidad base, igual que los precios de venta. */}
-                  <ValorPorPresentacionInput
-                    valor={form.costoReferencia}
-                    onChange={(v) => setForm({ ...form, costoReferencia: v })}
-                    presentacionId={presentacionDelCosto}
-                    onPresentacion={setPresentacionCosto}
-                    presentaciones={presentacionesDelForm}
-                    unidadBase={unidadBase || 'unidad base'}
+                <div className="grid gap-5 sm:grid-cols-[11rem_1fr]">
+                  {/* La foto se sube al elegirla; aquí queda solo su ruta. */}
+                  <CampoFoto
+                    label="Foto del producto"
+                    carpeta="productos"
+                    variante="recuadro"
+                    valor={form.foto || null}
+                    onChange={(ruta) => setForm({ ...form, foto: ruta ?? '' })}
+                    onSubiendo={setSubiendoFoto}
                     disabled={guardando}
                   />
 
+                  <div className="flex min-w-0 flex-col gap-4">
+                    <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
+                      <Input
+                        label="Código"
+                        placeholder="AZ-RUB"
+                        value={form.codigo}
+                        onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+                      />
+                      <Input
+                        label="Nombre"
+                        placeholder="Azúcar rubia"
+                        value={form.nombre}
+                        onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {/* El + crea la categoria sin salir del formulario: si no
+                          existe, no hay que perder lo escrito para ir a crearla. */}
+                      <Desplegable
+                        label="Categoría"
+                        optional
+                        hint={
+                          <BotonMas label="Nueva categoría" onClick={() => setCrearRapido('categoria')} />
+                        }
+                        value={form.categoriaId}
+                        onChange={(v) => setForm({ ...form, categoriaId: Number(v) })}
+                        options={[
+                          { value: 0, label: 'Sin categoría' },
+                          ...categorias
+                            .filter((c) => c.activo)
+                            .map((c) => ({ value: c.id, label: c.nombre })),
+                        ]}
+                      />
+
+                      <Desplegable
+                        label="Marca"
+                        optional
+                        hint={<BotonMas label="Nueva marca" onClick={() => setCrearRapido('marca')} />}
+                        value={form.marcaId}
+                        onChange={(v) => setForm({ ...form, marcaId: Number(v) })}
+                        options={[
+                          { value: 0, label: 'Sin marca' },
+                          ...marcas
+                            .filter((m) => m.activo)
+                            .map((m) => ({ value: m.id, label: m.nombre })),
+                        ]}
+                      />
+                    </div>
+
+                    <Input
+                      label="Descripción"
+                      optional
+                      maxLength={500}
+                      placeholder="Saco de 50 kg, grano entero. Proveedor del norte."
+                      value={form.descripcion}
+                      onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-line pt-4">
+                  <p className="text-[11px] font-semibold tracking-wider text-ink-muted uppercase">
+                    Precio, stock y peso
+                  </p>
                   {/*
-                    A cuánto se vende, como respaldo.
-                    Es el precio que sale cuando el pedido no lleva lista, o cuando la lista no
-                    tiene cargada esa presentación: sin esto la línea salía en cero.
+                    Los cuatro numeros del producto, en dos filas de dos.
+
+                    Los tres que se escriben por presentacion llevan el selector al lado del numero,
+                    no debajo, para que todas las celdas midan lo mismo y la rejilla no salga
+                    descuadrada segun cuantas presentaciones tenga cada uno.
                   */}
-                  <div className="flex flex-col gap-1.5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Se escribe como lo cobra el proveedor y se guarda por
+                        unidad base, igual que los precios de venta. */}
                     <ValorPorPresentacionInput
-                      valor={form.precioReferencia}
-                      onChange={(v) => setForm({ ...form, precioReferencia: v })}
-                      presentacionId={presentacionDelPrecio}
-                      onPresentacion={setPresentacionPrecio}
+                      valor={form.costoReferencia}
+                      onChange={(v) => setForm({ ...form, costoReferencia: v })}
+                      presentacionId={presentacionDelCosto}
+                      onPresentacion={setPresentacionCosto}
                       presentaciones={presentacionesDelForm}
                       unidadBase={unidadBase || 'unidad base'}
                       disabled={guardando}
-                      uso="venta"
-                      etiqueta="Precio de venta"
                     />
 
                     {/*
-                      El precio se escribe TAL COMO SE COBRA: si el producto paga IGV, ya viene
-                      incluido, no se le suma nada encima. Este switch es lo único que distingue un
-                      producto gravado de uno exonerado (varios alimentos de primera necesidad).
+                      A cuánto se vende, como respaldo.
+                      Es el precio que sale cuando el pedido no lleva lista, o cuando la lista no
+                      tiene cargada esa presentación: sin esto la línea salía en cero.
                     */}
-                    <Checkbox
-                      label="Afecto a IGV"
-                      checked={form.afectoIgv}
-                      onChange={(e) => setForm({ ...form, afectoIgv: e.target.checked })}
-                      disabled={guardando}
+                    <div className="flex flex-col gap-1.5">
+                      <ValorPorPresentacionInput
+                        valor={form.precioReferencia}
+                        onChange={(v) => setForm({ ...form, precioReferencia: v })}
+                        presentacionId={presentacionDelPrecio}
+                        onPresentacion={setPresentacionPrecio}
+                        presentaciones={presentacionesDelForm}
+                        unidadBase={unidadBase || 'unidad base'}
+                        disabled={guardando}
+                        uso="venta"
+                        etiqueta="Precio de venta"
+                      />
+
+                      {/*
+                        El precio se escribe TAL COMO SE COBRA: si el producto paga IGV, ya viene
+                        incluido, no se le suma nada encima. Este switch es lo único que distingue un
+                        producto gravado de uno exonerado (varios alimentos de primera necesidad).
+                      */}
+                      <Checkbox
+                        label="Afecto a IGV"
+                        checked={form.afectoIgv}
+                        onChange={(e) => setForm({ ...form, afectoIgv: e.target.checked })}
+                        disabled={guardando}
+                      />
+                      {form.afectoIgv && Number(form.precioReferencia) > 0 && (
+                        <p className="text-xs text-ink-soft">
+                          Valor sin IGV: S/ {(Number(form.precioReferencia) / 1.18).toFixed(2)} por{' '}
+                          {unidadBase || 'unidad base'}
+                        </p>
+                      )}
+                    </div>
+
+                    <Input
+                      label="Stock mínimo"
+                      optional
+                      type="number"
+                      step="0.0001"
+                      hint={
+                        <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
+                      }
+                      value={form.stockMinimo}
+                      onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
                     />
-                    {form.afectoIgv && Number(form.precioReferencia) > 0 && (
-                      <p className="text-xs text-ink-soft">
-                        Valor sin IGV: S/ {(Number(form.precioReferencia) / 1.18).toFixed(2)} por{' '}
-                        {unidadBase || 'unidad base'}
-                      </p>
-                    )}
+
+                    {/*
+                      Cuánto pesa, escrito sobre la presentación que se tiene delante.
+                      Se guarda por unidad base, y de ahí sale solo lo que pesa cualquier cantidad
+                      —una caja, un pedido, el camión entero— sin anotarlo en cada presentación.
+                    */}
+                    <ValorPorPresentacionInput
+                      valor={form.pesoUnidadBase}
+                      onChange={(v) => setForm({ ...form, pesoUnidadBase: v })}
+                      presentacionId={presentacionDelPeso}
+                      onPresentacion={setPresentacionPeso}
+                      presentaciones={presentacionesDelForm}
+                      unidadBase={unidadBase || 'unidad base'}
+                      disabled={guardando}
+                      uso="todas"
+                      magnitud="peso"
+                      etiqueta="Peso"
+                    />
                   </div>
-
-                  <Input
-                    label="Stock mínimo"
-                    optional
-                    type="number"
-                    step="0.0001"
-                    hint={
-                      <span className="text-xs text-ink-soft">en {unidadBase || 'unidad base'}</span>
-                    }
-                    value={form.stockMinimo}
-                    onChange={(e) => setForm({ ...form, stockMinimo: e.target.value })}
-                  />
-
-                  {/*
-                    Cuánto pesa, escrito sobre la presentación que se tiene delante.
-                    Se guarda por unidad base, y de ahí sale solo lo que pesa cualquier cantidad
-                    —una caja, un pedido, el camión entero— sin anotarlo en cada presentación.
-                  */}
-                  <ValorPorPresentacionInput
-                    valor={form.pesoUnidadBase}
-                    onChange={(v) => setForm({ ...form, pesoUnidadBase: v })}
-                    presentacionId={presentacionDelPeso}
-                    onPresentacion={setPresentacionPeso}
-                    presentaciones={presentacionesDelForm}
-                    unidadBase={unidadBase || 'unidad base'}
-                    disabled={guardando}
-                    uso="todas"
-                    magnitud="peso"
-                    etiqueta="Peso"
-                  />
                 </div>
-
-                {/* La foto se sube al elegirla; aquí queda solo su ruta. */}
-                <CampoFoto
-                  label="Foto del producto"
-                  carpeta="productos"
-                  valor={form.foto || null}
-                  onChange={(ruta) => setForm({ ...form, foto: ruta ?? '' })}
-                  onSubiendo={setSubiendoFoto}
-                  disabled={guardando}
-                />
-
-                {/* Ancho completo y al final: es texto libre, y lo de arriba
-                    son los datos con los que se busca y se calcula. */}
-                <Input
-                  label="Descripción"
-                  optional
-                  maxLength={500}
-                  placeholder="Saco de 50 kg, grano entero. Proveedor del norte."
-                  value={form.descripcion}
-                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                />
               </div>
             ) : (
               <div className="flex flex-col gap-4">

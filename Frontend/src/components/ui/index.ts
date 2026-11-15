@@ -33,6 +33,7 @@ export type { AgregarProductoPanelProps, LineaProductoNueva, PrecioResuelto } fr
 export { StatCard } from './StatCard'
 export { FilaStats } from './FilaStats'
 export { ResumenPagos } from './ResumenPagos'
+export { VisorImagen } from './VisorImagen'
 export { CifrasPago } from './CifrasPago'
 export type { CifraPago } from './CifrasPago'
 export type { StatCardProps } from './StatCard'

@@ -20,3 +20,6 @@ deploy-*.tar.gz
 # Config de producción: credenciales reales, nunca al repo
 **/appsettings.Production.json
 **/appsettings.*.local.json
+
+# Fotos que se suben desde el sistema (productos, usuarios, flota): son datos de cada servidor, no código.
+Backend/Backend/wwwroot/uploads/
