@@ -903,7 +903,7 @@ export function ProductosPage() {
                 <div className="grid gap-5 sm:grid-cols-[11rem_1fr]">
                   {/* La foto se sube al elegirla; aquí queda solo su ruta. */}
                   <CampoFoto
-                    label="Foto del producto"
+                    label="Foto"
                     carpeta="productos"
                     variante="recuadro"
                     valor={form.foto || null}
