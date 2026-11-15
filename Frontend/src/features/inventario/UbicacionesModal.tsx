@@ -9,7 +9,7 @@ import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
 import { productoApi } from '../maestros/productoApi'
 import type { ProductoResponse } from '../maestros/productoApi'
-import { TIPOS_UBICACION, ubicacionApi } from './inventarioApi'
+import { TIPOS_UBICACION, tipoUbicacion, ubicacionApi } from './inventarioApi'
 import type { AlmacenResponse, TipoUbicacion, UbicacionProductoResponse, UbicacionResponse } from './inventarioApi'
 
 const ICONOS: Record<TipoUbicacion, LucideIcon> = {
@@ -285,7 +285,7 @@ export function UbicacionesModal({
       open
       size="2xl"
       title={`Ubicaciones de ${almacen.nombre}`}
-      description="Pisos y cuartos. Sirve para saber dónde está cada producto."
+      description="Pisos y cuartos o zonas. Sirve para saber dónde está cada producto."
       onClose={onClose}
       footer={
         <Button variant="secondary" size="sm" onClick={onClose}>
@@ -446,16 +446,19 @@ export function UbicacionesModal({
       >
         {form && (
           <div className="flex flex-col gap-4">
-            <Desplegable
-              label="Qué es"
-              value={form.tipo}
-              onChange={(v) => setForm({ ...form, tipo: v as TipoUbicacion })}
-              // Adentro de un piso solo van cuartos; un piso va directo en el almacén.
-              options={TIPOS_UBICACION.filter((t) => form.padreId === null || t.value === 'CUARTO').map((t) => ({ value: t.value, label: t.label }))}
-            />
+            <div className="flex flex-col gap-1.5">
+              <Desplegable
+                label="Nivel"
+                value={form.tipo}
+                onChange={(v) => setForm({ ...form, tipo: v as TipoUbicacion })}
+                // Adentro de un piso solo van cuartos; un piso va directo en el almacén.
+                options={TIPOS_UBICACION.filter((t) => form.padreId === null || t.value === 'CUARTO').map((t) => ({ value: t.value, label: t.label, nota: t.nota }))}
+              />
+              <p className="text-xs text-ink-muted">{tipoUbicacion(form.tipo).nota} El nombre lo pones abajo.</p>
+            </div>
             <Input
               label="Código"
-              placeholder="P1, C1"
+              placeholder={tipoUbicacion(form.tipo).ejemploCodigo}
               value={form.codigo}
               maxLength={20}
               onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase().replace(/[^A-Z0-9._]/g, '') })}
@@ -463,7 +466,7 @@ export function UbicacionesModal({
             <Input
               label="Nombre"
               optional
-              placeholder="Primer piso, Abarrotes..."
+              placeholder={tipoUbicacion(form.tipo).ejemploNombre}
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
             />
@@ -498,12 +501,15 @@ export function UbicacionesModal({
       >
         {lote && (
           <div className="flex flex-col gap-4">
-            <Desplegable
-              label="Qué son"
-              value={lote.tipo}
-              onChange={(v) => setLote({ ...lote, tipo: v as TipoUbicacion })}
-              options={TIPOS_UBICACION.filter((t) => lote.padreId === null || t.value === 'CUARTO').map((t) => ({ value: t.value, label: t.label }))}
-            />
+            <div className="flex flex-col gap-1.5">
+              <Desplegable
+                label="Nivel"
+                value={lote.tipo}
+                onChange={(v) => setLote({ ...lote, tipo: v as TipoUbicacion })}
+                options={TIPOS_UBICACION.filter((t) => lote.padreId === null || t.value === 'CUARTO').map((t) => ({ value: t.value, label: t.label, nota: t.nota }))}
+              />
+              <p className="text-xs text-ink-muted">{tipoUbicacion(lote.tipo).nota}</p>
+            </div>
             <Input
               label="Prefijo del código"
               optional

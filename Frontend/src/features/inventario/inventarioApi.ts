@@ -88,10 +88,28 @@ export const almacenApi = {
 
 export type TipoUbicacion = 'PISO' | 'CUARTO'
 
-export const TIPOS_UBICACION: { value: TipoUbicacion; label: string }[] = [
-  { value: 'PISO', label: 'Piso' },
-  { value: 'CUARTO', label: 'Cuarto' },
+/**
+ * El nivel de un lugar dentro del almacén. No es su nombre: el nombre es libre ("Azotea", "Cocina") y va aparte. El
+ * nivel dice qué va dentro de qué: un piso va directo en el almacén y un cuarto, adentro de un piso (o suelto).
+ */
+export const TIPOS_UBICACION: { value: TipoUbicacion; label: string; nota: string; ejemploCodigo: string; ejemploNombre: string }[] = [
+  {
+    value: 'PISO',
+    label: 'Piso',
+    nota: 'Va directo en el almacén. Ej.: primer piso, azotea, sótano.',
+    ejemploCodigo: 'P1, P2, AZ',
+    ejemploNombre: 'Primer piso, Azotea, Sótano...',
+  },
+  {
+    value: 'CUARTO',
+    label: 'Cuarto o zona',
+    nota: 'Va adentro de un piso (o suelto en el almacén si no tiene pisos). Ej.: cocina, sala, abarrotes.',
+    ejemploCodigo: 'C1, C2, COC',
+    ejemploNombre: 'Cocina, Sala, Abarrotes...',
+  },
 ]
+
+export const tipoUbicacion = (tipo: TipoUbicacion) => TIPOS_UBICACION.find((t) => t.value === tipo) ?? TIPOS_UBICACION[1]
 
 export interface UbicacionResponse {
   id: number
