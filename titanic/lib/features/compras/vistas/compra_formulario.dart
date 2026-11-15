@@ -325,12 +325,14 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
 
   Future<void> _gestionarPagos() async {
     final metodos = ref.read(metodosPagoActivosProvider);
-    await abrirHoja<void>(context, (context) {
-      String? tipo;
-      int? metodoId;
-      final montoCtrl = TextEditingController();
-      String? errorAgregar;
+    // Fuera del builder: la hoja se vuelve a armar cuando el teclado aparece o se va, y aquí dentro el
+    // monto escrito y el método elegido se perdían.
+    String? tipo;
+    int? metodoId;
+    final montoCtrl = TextEditingController();
+    String? errorAgregar;
 
+    await abrirHoja<void>(context, (context) {
       return StatefulBuilder(
         builder: (context, setSheetState) {
           final metodosDelTipo = metodos.where((m) => m.tipo == tipo).toList();

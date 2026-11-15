@@ -17,8 +17,10 @@ Future<T?> mostrarSelectorBuscable<T>({
   required Widget Function(T item) fila,
   String pistaBusqueda = 'Buscar...',
 }) {
+  // Fuera del builder: la hoja se vuelve a armar cuando el teclado aparece o se
+  // va, y aquí dentro el texto buscado volvía a quedar vacío.
+  var texto = '';
   return abrirHoja<T>(context, (context) {
-    var texto = '';
     return StatefulBuilder(
       builder: (context, setSheetState) {
         final visibles = texto.isEmpty

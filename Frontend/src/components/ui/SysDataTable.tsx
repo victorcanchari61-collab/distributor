@@ -335,6 +335,9 @@ export function SysDataTable<T>({
   // Dentro de una ventana emergente la tabla crece con sus filas en vez de reservar un alto fijo (dejaba un hueco
   // vacío), y el pie de paginación solo sale si de verdad hay más filas de las que caben en una página.
   const enModal = useContext(DentroDeModal)
+  // Lo mismo en una tabla sin buscador ni filtros (las líneas de un pedido o una compra): es parte de un formulario,
+  // no un listado, y "Sin registros · 20 por página" debajo de "Agrega productos" sobraba.
+  const paginacionSoloSiHaceFalta = enModal || !toolbar
   const alturaFija = alturaFijaPedida ?? (!enModal && toolbar && paginacion)
   // Las acciones son píldoras de color, más anchas que los íconos sueltos de antes: el ancho que pide cada pantalla se ensancha.
   const actionsWidth = Math.round(actionsWidthBase * 1.2)
@@ -1253,7 +1256,7 @@ export function SysDataTable<T>({
         />
       )}
 
-      {paginacion && (!enModal || total > pageSize) && (
+      {paginacion && (!paginacionSoloSiHaceFalta || total > pageSize) && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[13px] text-ink-muted">
           <div className="flex flex-wrap items-center gap-3">
             <span>
