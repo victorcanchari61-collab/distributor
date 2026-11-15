@@ -925,6 +925,7 @@ export function SysDataTable<T>({
       <div className="hidden overflow-hidden rounded-lg shadow-sm ring-1 ring-zinc-200 sm:block">
         {/* el degradado va en el contenedor: cubre tambien el hueco que deja
             la barra de scroll, asi la franja llega hasta el borde */}
+        <div className="relative">
         <div
           ref={headRef}
           className="overflow-hidden bg-linear-to-br from-[rgb(var(--sys-rgb))] to-[rgb(var(--sys-dark-rgb))]"
@@ -1078,6 +1079,19 @@ export function SysDataTable<T>({
               </tr>
             </thead>
           </table>
+        </div>
+        {/*
+          Tapa el hueco de la barra vertical. Con la tabla desplazada de lado, la cabecera es más ancha que la vista y
+          en ese hueco (a la derecha de Acciones, que se fija antes de él) asomaba el texto de la columna de atrás.
+          Va fuera del contenedor que se desplaza para quedarse quieta en el borde.
+        */}
+        {scrollbar > 0 && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 z-30 bg-[rgb(var(--sys-dark-rgb))]"
+            style={{ width: scrollbar }}
+          />
+        )}
         </div>
 
         {/* solo las filas se desplazan: la barra queda por debajo de la cabecera */}
