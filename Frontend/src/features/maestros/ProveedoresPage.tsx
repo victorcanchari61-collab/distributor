@@ -264,6 +264,15 @@ export function ProveedoresPage() {
 
   const columns: DataTableColumn<ProveedorResponse>[] = [
     {
+      // El código de identificación, automático (sale del Id): PRV00012. Se busca escribiéndolo en el buscador.
+      key: 'codigo',
+      label: 'Código',
+      filterable: false,
+      sortable: false,
+      width: 110,
+      render: (row) => <span className="font-semibold text-[rgb(var(--sys-ink-rgb))] tabular-nums">{row.codigo}</span>,
+    },
+    {
       key: 'documento',
       label: 'Documento',
       filterable: false,
@@ -364,7 +373,7 @@ export function ProveedoresPage() {
       columns={columns}
       rows={proveedores}
       cardIcon={Building2}
-      searchPlaceholder="Buscar por razón social, documento o rubro..."
+      searchPlaceholder="Buscar por código, razón social, documento o rubro..."
       empty={cargando ? 'Cargando proveedores...' : 'Todavía no hay proveedores registrados.'}
       rowActions={(row) => (
         <>

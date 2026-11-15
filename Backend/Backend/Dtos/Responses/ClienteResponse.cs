@@ -3,6 +3,9 @@ namespace Backend.Dtos.Responses;
 public class ClienteResponse
 {
     public int Id { get; set; }
+
+    /// <summary>El código del cliente ("CLI01468"), sacado de su Id: automático y sin repetirse.</summary>
+    public string Codigo => Models.CodigoEntidad.Cliente(Id);
     public string Documento { get; set; } = string.Empty;
     public string TipoDoc { get; set; } = string.Empty;
 

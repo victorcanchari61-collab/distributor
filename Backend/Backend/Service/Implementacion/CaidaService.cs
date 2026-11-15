@@ -54,6 +54,13 @@ public class CaidaService : ICaidaService
             ? filas
             : filas.Where(f => f.Estado == consulta.Estado!.Trim().ToUpperInvariant()).ToList();
 
+        // La curva es de los mismos clientes del reporte (con el estado elegido, si hay uno), del año del "hasta".
+        var anio = periodo.Hasta.Year;
+        var (porMesActual, porMesAnterior) =
+            await CrmConsultas.VentasPorMesAsync(_context, items.Select(f => f.Id).ToList(), anio);
+        // Del año actual, solo hasta el mes del "hasta": los meses que no llegan van sin punto.
+        var ultimoMes = periodo.Hasta.Month;
+
         return new CaidaClientesResponse
         {
             Periodo = Describir(periodo),
@@ -67,6 +74,12 @@ public class CaidaService : ICaidaService
                 .ThenByDescending(f => f.MontoRiesgo)
                 .ThenBy(f => f.Cliente)
                 .ToList(),
+            Evolucion = new EvolucionVentasResponse
+            {
+                Anio = anio,
+                Actual = porMesActual.Select((v, i) => i < ultimoMes ? v : (decimal?)null).ToList(),
+                Anterior = porMesAnterior.ToList(),
+            },
         };
     }
 
@@ -116,7 +129,7 @@ public class CaidaService : ICaidaService
             filas.Add(new CaidaFilaResponse
             {
                 Id = c.Id,
-                Codigo = $"CLI{c.Id:D5}",
+                Codigo = CodigoEntidad.Cliente(c.Id),
                 Cliente = c.Nombre,
                 Documento = c.Documento,
                 Telefono = c.Telefono,

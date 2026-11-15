@@ -13,6 +13,7 @@ import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
+import '../../dashboard/widgets/grafico_linea.dart';
 import '../../maestros/vistas/categorizacion_hoja.dart';
 import '../datos/crm.dart';
 import '../estado/crm_controlador.dart';
@@ -150,6 +151,16 @@ class CaidaPagina extends ConsumerWidget {
               _ => '${soles(r.monto)} en riesgo',
             },
           ),
+          if (datos?.evolucion case final evolucion?)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Dimen.espacio4,
+                Dimen.espacio3,
+                Dimen.espacio4,
+                0,
+              ),
+              child: _EvolucionVentas(evolucion: evolucion, color: color),
+            ),
         ],
       ),
       filtro: BotonFiltros(
@@ -365,6 +376,157 @@ class _TarjetaCaida extends StatelessWidget {
             onPressed: () => abrirWhatsapp(context, f.telefono!),
           ),
       ],
+    );
+  }
+}
+
+const _mesesCortos = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
+];
+
+/// "Evolución de ventas", igual que el gráfico del panel web: lo vendido mes a
+/// mes a estos mismos clientes, este año contra el anterior.
+///
+/// Plegable y cerrado al entrar: el encabezado de la lista queda fijo arriba, y
+/// abierto le quitaba media pantalla a los clientes. Cerrado muestra los dos
+/// totales; al tocarlo se abre la curva.
+class _EvolucionVentas extends StatefulWidget {
+  const _EvolucionVentas({required this.evolucion, required this.color});
+
+  final EvolucionVentas evolucion;
+  final Color color;
+
+  @override
+  State<_EvolucionVentas> createState() => _EvolucionVentasState();
+}
+
+class _EvolucionVentasState extends State<_EvolucionVentas> {
+  bool _abierto = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = widget.evolucion;
+    final vacio = e.totalActual == 0 && e.totalAnterior == 0;
+
+    return Material(
+      color: Colores.superficie,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+        side: const BorderSide(color: Colores.linea),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _abierto = !_abierto),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimen.espacio3,
+                vertical: Dimen.espacio2,
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.show_chart, size: 18, color: widget.color),
+                  const SizedBox(width: Dimen.espacio2),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Evolución de ventas',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Colores.tinta,
+                          ),
+                        ),
+                        Text(
+                          '${e.anio}: ${soles(e.totalActual)} · '
+                          '${e.anio - 1}: ${soles(e.totalAnterior)}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Colores.tintaSuave,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _abierto ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: const Icon(
+                      Icons.expand_more,
+                      color: Colores.tintaSuave,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: !_abierto
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      Dimen.espacio2,
+                      0,
+                      Dimen.espacio3,
+                      Dimen.espacio2,
+                    ),
+                    child: vacio
+                        ? const Padding(
+                            padding: EdgeInsets.all(Dimen.espacio4),
+                            child: Text(
+                              'Estos clientes no tienen ventas en los dos últimos años.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colores.tintaSuave,
+                              ),
+                            ),
+                          )
+                        : GraficoLinea(
+                            alto: 170,
+                            etiquetas: _mesesCortos,
+                            series: [
+                              SerieLinea(
+                                id: 'anterior',
+                                nombre: '${e.anio - 1}',
+                                color: const Color(0xFF94A3B8),
+                                valores: e.anterior,
+                                punteada: true,
+                              ),
+                              SerieLinea(
+                                id: 'actual',
+                                nombre: '${e.anio}',
+                                color: widget.color,
+                                valores: e.actual,
+                                area: true,
+                              ),
+                            ],
+                            formato: soles,
+                          ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

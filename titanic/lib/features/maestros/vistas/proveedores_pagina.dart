@@ -322,6 +322,7 @@ class _TarjetaProveedor extends StatelessWidget {
   /// Mismo criterio que en clientes: en la tarjeta solo lo que sirve para
   /// reconocer al proveedor; el resto vive en la ficha de detalle.
   List<CampoDetalle> get _campos => [
+    CampoDetalle('Código', proveedor.codigo),
     CampoDetalle('Razón social', proveedor.nombre),
     CampoDetalle(
       'Nombre comercial',

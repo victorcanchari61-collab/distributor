@@ -32,8 +32,10 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         if (!string.IsNullOrWhiteSpace(consulta.Buscar))
         {
             var texto = $"%{consulta.Buscar.Trim()}%";
+            var porCodigo = CodigoEntidad.IdDe(consulta.Buscar, CodigoEntidad.PrefijoCliente);
             query = query.Where(c =>
-                EF.Functions.Like(c.Nombre, texto) || EF.Functions.Like(c.Documento, texto)
+                (porCodigo != null && c.Id == porCodigo)
+                || EF.Functions.Like(c.Nombre, texto) || EF.Functions.Like(c.Documento, texto)
                 || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, texto))
                 || (c.Distrito != null && EF.Functions.Like(c.Distrito.Nombre, texto))
                 || (c.Ruta != null && EF.Functions.Like(c.Ruta.Nombre, texto)));
@@ -172,9 +174,12 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         if (string.IsNullOrWhiteSpace(buscar)) return query;
 
         var texto = buscar.Trim();
+        // "CLI01468" (o "cli1468") encuentra a ese cliente por su código.
+        var porCodigo = CodigoEntidad.IdDe(texto, CodigoEntidad.PrefijoCliente);
 
         return query.Where(c =>
-            EF.Functions.Like(c.Documento, $"%{texto}%")
+            (porCodigo != null && c.Id == porCodigo)
+            || EF.Functions.Like(c.Documento, $"%{texto}%")
             || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, $"%{texto}%"))
             || EF.Functions.Like(c.Nombre, $"%{texto}%")
             || (c.Direccion != null && EF.Functions.Like(c.Direccion, $"%{texto}%"))

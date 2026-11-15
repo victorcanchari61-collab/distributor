@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FileSpreadsheet, MessageCircle, TrendingDown } from 'lucide-react'
 import { FaMagnifyingGlass } from 'react-icons/fa6'
-import { DonutChart, HBarChart, Marco, moneda } from '../../components/charts'
+import { DonutChart, HBarChart, LineChart, Marco, moneda } from '../../components/charts'
 import { Alert, Button, ListPage, Modal, RowAction } from '../../components/ui'
 import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
@@ -47,6 +47,8 @@ const mismos = (a: FiltrosCaida, b: FiltrosCaida) =>
  * mes anterior (o del año anterior, a elección), y en qué estado está por cuánto cayó. Las tarjetas son filtros: tocar una deja solo esos clientes.
  * Desde cada fila se abre Gestión y seguimiento con el cliente ya elegido.
  */
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
 export function CaidaPage() {
   const navegar = useNavigate()
   const { puede } = usePermisos()
@@ -326,6 +328,11 @@ export function CaidaPage() {
     [items],
   )
 
+  // La curva del año: viene del servidor con los mismos clientes del reporte.
+  const evolucion = datos?.evolucion
+  const totalActual = (evolucion?.actual ?? []).reduce<number>((s, v) => s + (v ?? 0), 0)
+  const totalAnterior = (evolucion?.anterior ?? []).reduce((s, v) => s + v, 0)
+
   /** Lo que se ve en la tabla (con sus filtros y la tarjeta elegida), en un Excel. */
   const exportar = () =>
     exportarExcel(
@@ -395,7 +402,8 @@ export function CaidaPage() {
             })}
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-2">
+          {/* Los tres en una fila: cómo están, dónde está la plata en riesgo y cómo vino el año. */}
+          <section className="grid gap-4 lg:grid-cols-3">
             <Marco
               titulo="Clientes por estado"
               subtitulo={datos ? `${soles(datos.ventaActual)} vendidos frente a ${soles(datos.ventaAnterior)} ${referencia}` : undefined}
@@ -427,6 +435,47 @@ export function CaidaPage() {
                 items={mayores.map((f) => ({ nombre: f.cliente, valor: f.montoRiesgo, color: ESTADOS_UI[f.estado].color, detalle: ESTADOS_UI[f.estado].etiqueta }))}
                 formato={(n) => moneda(n)}
               />
+            </Marco>
+
+            {/*
+              Cómo vino el año de estos mismos clientes, mes a mes, contra el año anterior: muestra si la caída es de
+              este tramo o viene de antes. Los meses que todavía no llegan quedan sin punto.
+            */}
+            <Marco
+              titulo="Evolución de ventas"
+              subtitulo={
+                evolucion
+                  ? `${evolucion.anio}: ${soles(totalActual)} · ${evolucion.anio - 1}: ${soles(totalAnterior)}`
+                  : undefined
+              }
+              cargando={cargando && !datos}
+              vacio={!!evolucion && totalActual === 0 && totalAnterior === 0}
+              mensajeVacio="Estos clientes no tienen ventas en los dos últimos años"
+              alto={168}
+            >
+              {evolucion && (
+                <LineChart
+                  alto={168}
+                  etiquetas={MESES_CORTOS}
+                  series={[
+                    {
+                      id: 'anterior',
+                      nombre: String(evolucion.anio - 1),
+                      color: '#94a3b8',
+                      valores: evolucion.anterior,
+                      punteada: true,
+                    },
+                    {
+                      id: 'actual',
+                      nombre: String(evolucion.anio),
+                      color: 'rgb(var(--sys-rgb))',
+                      valores: evolucion.actual,
+                      area: true,
+                    },
+                  ]}
+                  formato={(n) => moneda(n)}
+                />
+              )}
             </Marco>
           </section>
         </div>

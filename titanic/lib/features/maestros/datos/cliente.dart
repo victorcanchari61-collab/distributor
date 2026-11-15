@@ -111,9 +111,12 @@ class Cliente {
     return tipo == null || tipo.isEmpty ? doc : '$tipo $doc';
   }
 
+  /// Su código ("CLI01468"): sale del Id, igual que en el panel web.
+  String get codigo => 'CLI${id.toString().padLeft(5, '0')}';
+
   /// Texto contra el que se busca en la lista.
   String get buscable =>
-      '$documento ${documentoAlterno ?? ''} $nombre ${direccion ?? ''} ${distrito ?? ''} ${mercado ?? ''} ${ruta ?? ''}'
+      '$codigo $documento ${documentoAlterno ?? ''} $nombre ${direccion ?? ''} ${distrito ?? ''} ${mercado ?? ''} ${ruta ?? ''}'
           .toLowerCase();
 
   factory Cliente.desdeJson(Map<String, dynamic> json) => Cliente(

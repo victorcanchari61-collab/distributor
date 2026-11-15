@@ -240,6 +240,7 @@ class CaidaClientes {
     required this.ventaActual,
     required this.soloPropios,
     required this.items,
+    this.evolucion,
   });
 
   final PeriodoCaida periodo;
@@ -248,6 +249,10 @@ class CaidaClientes {
   final double ventaActual;
   final bool soloPropios;
   final List<FilaCaida> items;
+
+  /// Lo vendido mes a mes a estos mismos clientes, este año contra el
+  /// anterior. Null si el servidor todavía no lo manda.
+  final EvolucionVentas? evolucion;
 
   factory CaidaClientes.desdeJson(Map<String, dynamic> j) => CaidaClientes(
     periodo: PeriodoCaida.desdeJson(j['periodo'] as Map<String, dynamic>),
@@ -259,6 +264,35 @@ class CaidaClientes {
       for (final e in (j['items'] as List?) ?? const [])
         FilaCaida.desdeJson(e as Map<String, dynamic>),
     ],
+    evolucion: j['evolucion'] is Map<String, dynamic>
+        ? EvolucionVentas.desdeJson(j['evolucion'] as Map<String, dynamic>)
+        : null,
+  );
+}
+
+/// Ventas de enero a diciembre de un año y del anterior. Del año actual, los
+/// meses que todavía no llegan vienen en null (sin punto en la curva).
+class EvolucionVentas {
+  const EvolucionVentas({
+    required this.anio,
+    required this.actual,
+    required this.anterior,
+  });
+
+  final int anio;
+  final List<double?> actual;
+  final List<double> anterior;
+
+  double get totalActual => actual.fold(0, (s, v) => s + (v ?? 0));
+  double get totalAnterior => anterior.fold(0, (s, v) => s + v);
+
+  factory EvolucionVentas.desdeJson(Map<String, dynamic> j) => EvolucionVentas(
+    anio: (j['anio'] as num?)?.toInt() ?? DateTime.now().year,
+    actual: [
+      for (final v in (j['actual'] as List?) ?? const [])
+        (v as num?)?.toDouble(),
+    ],
+    anterior: [for (final v in (j['anterior'] as List?) ?? const []) _d(v)],
   );
 }
 

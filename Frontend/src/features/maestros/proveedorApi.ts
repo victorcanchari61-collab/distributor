@@ -3,6 +3,8 @@ import type { ResultadoImportacion } from '../../components/ui'
 
 export interface ProveedorResponse {
   id: number
+  /** Su código ("PRV00012"), sacado del Id: automático y sin repetirse. */
+  codigo: string
   documento: string
   tipoDoc: string
   /** Razon social. */

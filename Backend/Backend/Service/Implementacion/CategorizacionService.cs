@@ -344,7 +344,7 @@ public class CategorizacionService : ICategorizacionService
             .Select(f => new ClienteCategoriaResponse
             {
                 ClienteId = f.Id,
-                Codigo = $"CLI{f.Id:D5}",
+                Codigo = CodigoEntidad.Cliente(f.Id),
                 Documento = f.Documento,
                 Nombre = f.Nombre,
                 Ruta = f.Ruta,

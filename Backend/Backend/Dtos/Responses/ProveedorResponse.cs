@@ -3,6 +3,9 @@ namespace Backend.Dtos.Responses;
 public class ProveedorResponse
 {
     public int Id { get; set; }
+
+    /// <summary>El código del proveedor ("PRV00012"), sacado de su Id: automático y sin repetirse.</summary>
+    public string Codigo => Models.CodigoEntidad.Proveedor(Id);
     public string Documento { get; set; } = string.Empty;
     public string TipoDoc { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;

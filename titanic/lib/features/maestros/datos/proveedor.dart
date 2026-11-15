@@ -36,8 +36,11 @@ class Proveedor {
 
   final bool activo;
 
+  /// Su código ("PRV00012"): sale del Id, igual que en el panel web.
+  String get codigo => 'PRV${id.toString().padLeft(5, '0')}';
+
   String get buscable =>
-      '$documento $nombre ${nombreComercial ?? ''} ${rubro ?? ''} ${distrito ?? ''}'
+      '$codigo $documento $nombre ${nombreComercial ?? ''} ${rubro ?? ''} ${distrito ?? ''}'
           .toLowerCase();
 
   factory Proveedor.desdeJson(Map<String, dynamic> json) => Proveedor(

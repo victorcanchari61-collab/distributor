@@ -132,7 +132,7 @@ public class SeguimientoClienteService : ISeguimientoClienteService
             Cliente = new DatosClienteResponse
             {
                 Id = c.Id,
-                Codigo = $"CLI{c.Id:D5}",
+                Codigo = CodigoEntidad.Cliente(c.Id),
                 Nombre = c.Nombre,
                 Tipo = c.TipoDoc == TipoDocumento.Ruc ? "Empresa" : "Persona",
                 TipoDoc = c.TipoDoc,
@@ -595,7 +595,7 @@ public class SeguimientoClienteService : ISeguimientoClienteService
             {
                 GestionId = f.Id,
                 ClienteId = f.ClienteId,
-                Codigo = $"CLI{f.ClienteId:D5}",
+                Codigo = CodigoEntidad.Cliente(f.ClienteId),
                 Cliente = f.Cliente,
                 Telefono = f.Telefono,
                 Mercado = f.Mercado,

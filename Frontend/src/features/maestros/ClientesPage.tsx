@@ -389,6 +389,15 @@ export function ClientesPage() {
 
   const columns: DataTableColumn<ClienteResponse>[] = [
     {
+      // El código de identificación, automático (sale del Id): CLI01468. Se busca escribiéndolo en el buscador.
+      key: 'codigo',
+      label: 'Código',
+      filterable: false,
+      sortable: false,
+      width: 110,
+      render: (row) => <span className="font-semibold text-[rgb(var(--sys-ink-rgb))] tabular-nums">{row.codigo}</span>,
+    },
+    {
       key: 'documento',
       label: 'Documento',
       filterable: false,
@@ -575,7 +584,7 @@ export function ClientesPage() {
           },
         }}
         cardIcon={Contact}
-        searchPlaceholder="Buscar por nombre, documento, mercado..."
+        searchPlaceholder="Buscar por código, nombre, documento, mercado..."
         empty={cargando ? 'Cargando clientes...' : 'Todavía no hay clientes registrados.'}
         rowActions={(row) => (
           <>

@@ -73,6 +73,15 @@ export interface CaidaClientes {
   ventaActual: number
   soloPropios: boolean
   items: FilaCaida[]
+  /** Lo vendido mes a mes a estos mismos clientes, este año contra el anterior. */
+  evolucion: EvolucionVentas
+}
+
+/** Enero a diciembre. Del año actual, los meses que no llegan vienen en null. */
+export interface EvolucionVentas {
+  anio: number
+  actual: (number | null)[]
+  anterior: number[]
 }
 
 /** Contra qué se compara el tramo: el mes anterior (lo normal) o el año anterior. */

@@ -4,6 +4,8 @@ import type { PaginaResponse } from '../../lib/paginacion'
 
 export interface ClienteResponse {
   id: number
+  /** Su código ("CLI01468"), sacado del Id: automático y sin repetirse. */
+  codigo: string
   documento: string
   /** DNI, RUC o CODIGO, deducido del largo del documento. */
   tipoDoc: string

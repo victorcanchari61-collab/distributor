@@ -110,6 +110,59 @@ public static class CrmConsultas
         return resultado;
     }
 
+    /// <summary>
+    /// Lo vendido a esos clientes por mes (hora de Perú) en un año y en el anterior, con la misma cuenta que
+    /// <see cref="VentasPorClienteAsync"/>: líneas vigentes de ventas no anuladas, menos lo recogido.
+    /// </summary>
+    public static async Task<(decimal[] Actual, decimal[] Anterior)> VentasPorMesAsync(
+        AppDbContext context, IReadOnlyCollection<int> clienteIds, int anio)
+    {
+        var actual = new decimal[12];
+        var anterior = new decimal[12];
+        if (clienteIds.Count == 0) return (actual, anterior);
+
+        var ini = Zona.AUtc(new DateTime(anio - 1, 1, 1));
+        var fin = Zona.AUtc(new DateTime(anio + 1, 1, 1));
+        var ids = clienteIds.ToList();
+
+        // El mes se toma en hora de Perú: una venta del 31 a las 9 p. m. es de ese mes, no del siguiente.
+        var vendido = await context.NotaVentaDetalles
+            .Where(d => !d.Anulado
+                        && d.NotaVenta!.Estado != EstadoNotaVenta.Anulada
+                        && d.NotaVenta.Fecha >= ini && d.NotaVenta.Fecha < fin
+                        && ids.Contains(d.NotaVenta.ClienteId))
+            .GroupBy(d => new { d.NotaVenta!.Fecha.AddHours(-5).Year, d.NotaVenta.Fecha.AddHours(-5).Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(d => d.CantidadPresentacion * d.PrecioPresentacion) })
+            .ToListAsync();
+
+        var recogido = await context.RecojosVenta
+            .Where(r => r.Estado != EstadoRecojo.Anulado
+                        && r.NotaVenta!.Estado != EstadoNotaVenta.Anulada
+                        && r.NotaVenta.Fecha >= ini && r.NotaVenta.Fecha < fin
+                        && ids.Contains(r.NotaVenta.ClienteId))
+            .GroupBy(r => new { r.NotaVenta!.Fecha.AddHours(-5).Year, r.NotaVenta.Fecha.AddHours(-5).Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Total = g.Sum(r => r.Importe) })
+            .ToListAsync();
+
+        foreach (var v in vendido)
+        {
+            var destino = v.Year == anio ? actual : anterior;
+            destino[v.Month - 1] += v.Total;
+        }
+        foreach (var r in recogido)
+        {
+            var destino = r.Year == anio ? actual : anterior;
+            destino[r.Month - 1] = Math.Max(0m, destino[r.Month - 1] - r.Total);
+        }
+
+        for (var i = 0; i < 12; i++)
+        {
+            actual[i] = Math.Round(actual[i], 2);
+            anterior[i] = Math.Round(anterior[i], 2);
+        }
+        return (actual, anterior);
+    }
+
     /// <summary>El instante (UTC) de la última venta vigente de cada cliente.</summary>
     public static async Task<Dictionary<int, DateTime>> UltimasComprasAsync(AppDbContext context, int? clienteId = null)
     {

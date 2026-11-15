@@ -391,6 +391,7 @@ class _TarjetaCliente extends StatelessWidget {
   /// Los marcados `enTarjeta: false` solo salen en la ficha de detalle: en el
   /// listado estorban y hacen que entren menos registros en pantalla.
   List<CampoDetalle> get _campos => [
+    CampoDetalle('Código', cliente.codigo),
     CampoDetalle('Nombre', cliente.nombre),
     // "RUC 10…" / "DNI …": en la tarjeta solo sale cuando lo tiene, para no
     // gastar una línea en una raya; la ficha lo muestra siempre.

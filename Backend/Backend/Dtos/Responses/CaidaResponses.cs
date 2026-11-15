@@ -97,6 +97,20 @@ public class CaidaClientesResponse
     public bool SoloPropios { get; set; }
 
     public List<CaidaFilaResponse> Items { get; set; } = [];
+
+    /// <summary>Lo vendido mes a mes a estos mismos clientes, este año contra el anterior.</summary>
+    public EvolucionVentasResponse Evolucion { get; set; } = new();
+}
+
+/// <summary>
+/// Ventas de enero a diciembre de un año y del anterior, para la curva "Evolución de ventas". Los meses que todavía
+/// no llegan en el año actual van en null (sin punto), no en cero: un cero diría que no se vendió nada.
+/// </summary>
+public class EvolucionVentasResponse
+{
+    public int Anio { get; set; }
+    public List<decimal?> Actual { get; set; } = [];
+    public List<decimal> Anterior { get; set; } = [];
 }
 
 /// <summary>Un producto del cliente: lo que dejó de comprar y lo que no.</summary>
