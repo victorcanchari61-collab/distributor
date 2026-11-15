@@ -14,7 +14,7 @@ public static class TipoUbicacion
     public static string Etiqueta(string tipo) => tipo switch
     {
         Piso => "Piso",
-        Cuarto => "Cuarto",
+        Cuarto => "Lugar",
         _ => tipo,
     };
 }
@@ -22,8 +22,8 @@ public static class TipoUbicacion
 /// <summary>
 /// Un lugar dentro de un almacén: un piso o un cuarto.
 ///
-/// Forman un árbol: el piso 1 tiene los cuartos C1 y C2. Cada punto lleva su código
-/// y la "ruta" (los códigos de arriba hacia abajo, unidos con guion: P1-C1) es como se nombra y se
+/// Forman un árbol: el piso 1 tiene los lugares 01 y 02. Cada punto lleva su código
+/// y la "ruta" (los códigos de arriba hacia abajo, unidos con guion: P1-01) es como se nombra y se
 /// busca el lugar. Hoy sirve para decir DÓNDE está un producto; el stock sigue contándose por almacén.
 /// </summary>
 public class UbicacionAlmacen
@@ -39,7 +39,7 @@ public class UbicacionAlmacen
 
     public string Tipo { get; set; } = TipoUbicacion.Cuarto;
 
-    /// <summary>El código corto de este punto ("P1", "C1"). No se repite entre hermanos.</summary>
+    /// <summary>El código corto de este punto ("P1", "01"). No se repite entre hermanos.</summary>
     public string Codigo { get; set; } = string.Empty;
 
     /// <summary>Un nombre para leerlo ("Primer piso", "Cuarto de abarrotes").</summary>

@@ -17,25 +17,24 @@ const ICONOS: Record<TipoUbicacion, LucideIcon> = {
   CUARTO: DoorOpen,
 }
 
-/** Cómo se dice cada nivel en pantalla, y con qué letra empieza su código. */
-const NIVEL: Record<TipoUbicacion, { uno: string; ejemplos: string; letra: string }> = {
-  PISO: { uno: 'piso', ejemplos: 'Primer piso, Azotea, Sótano...', letra: 'P' },
-  CUARTO: { uno: 'cuarto', ejemplos: 'Cocina, Sala, Abarrotes...', letra: 'C' },
+/** Cómo se dice cada nivel en pantalla. Lo de adentro de un piso es un "lugar": puede ser cocina, zona o estante. */
+const NIVEL: Record<TipoUbicacion, { uno: string; ejemplos: string }> = {
+  PISO: { uno: 'piso', ejemplos: 'Primer piso, Azotea, Sótano...' },
+  CUARTO: { uno: 'lugar', ejemplos: 'Cocina, Abarrotes, Estante...' },
 }
 
 /**
- * El código que le toca al próximo lugar de un nivel: la letra del nivel y el número que sigue al más alto entre los
- * hermanos (con P1 y P2, sale P3). Es la misma regla del servidor. Sale puesto en el formulario y se puede cambiar.
+ * El código que le toca al próximo lugar de un nivel, el número que sigue al más alto entre los hermanos. Un piso
+ * lleva P (P1, P2...); lo de adentro, solo dos cifras (01, 02...): el código dice dónde está (P1-01), no qué es.
+ * Es la misma regla del servidor. Sale puesto en el formulario y se puede cambiar.
  */
 function siguienteCodigo(hermanos: UbicacionResponse[], tipo: TipoUbicacion): string {
-  const letra = NIVEL[tipo].letra
+  const patron = tipo === 'PISO' ? /^P(\d+)$/i : /^(\d+)$/
+  const formar = (n: number) => (tipo === 'PISO' ? `P${n}` : String(n).padStart(2, '0'))
   const ocupados = new Set(hermanos.map((h) => h.codigo.toUpperCase()))
-  let n = Math.max(0, ...hermanos.map((h) => {
-    const m = new RegExp(`^${letra}(\\d+)$`, 'i').exec(h.codigo)
-    return m ? Number(m[1]) : 0
-  })) + 1
-  while (ocupados.has(`${letra}${n}`)) n++
-  return `${letra}${n}`
+  let n = Math.max(0, ...hermanos.map((h) => Number(patron.exec(h.codigo)?.[1] ?? 0))) + 1
+  while (ocupados.has(formar(n))) n++
+  return formar(n)
 }
 
 interface FormLugar {
@@ -44,7 +43,7 @@ interface FormLugar {
   padreId: number | null
   /** La ruta del lugar de arriba, solo para mostrar dónde va a quedar. */
   dentroDe: string | null
-  /** Lo decide dónde se crea: en la raíz, lo que use el almacén; adentro de un piso, un cuarto. No se cambia. */
+  /** Lo decide dónde se crea: en la raíz, lo que use el almacén; adentro de un piso, un lugar. No se cambia. */
   tipo: TipoUbicacion
   /** Al crear sale puesto el siguiente del nivel (P3, C2...); se puede cambiar. */
   codigo: string
@@ -53,10 +52,10 @@ interface FormLugar {
 }
 
 /**
- * Los lugares de un almacén: pisos y cuartos.
+ * Los lugares de un almacén: pisos y lo que hay adentro (cocina, abarrotes, estante...).
  *
- * Son dos niveles: el almacén tiene pisos y cada piso sus cuartos (P1-C2). Un almacén de un solo ambiente no usa
- * pisos: tiene sus cuartos sueltos. Lo decide el primer lugar que se crea, y desde ahí la pantalla solo ofrece eso.
+ * Son dos niveles: el almacén tiene pisos y cada piso sus lugares (P1-01, P1-02). Un almacén de un solo ambiente no usa
+ * pisos: tiene sus lugares sueltos (01, 02). Lo decide el primer lugar que se crea, y desde ahí la pantalla solo ofrece eso.
  * El nivel sale de dónde se hace clic y el código sale puesto: la persona solo escribe el nombre. Hoy sirve para
  * decir DÓNDE está cada producto; el stock se sigue contando por almacén.
  */
@@ -109,7 +108,7 @@ export function UbicacionesModal({
 
   const lugarElegido = useMemo(() => lugares.find((l) => l.id === elegido) ?? null, [lugares, elegido])
 
-  // Lo que usa el almacén en la raíz: pisos, o cuartos sueltos. Nulo mientras está vacío (se elige al crear el primero).
+  // Lo que usa el almacén en la raíz: pisos, o lugares sueltos. Nulo mientras está vacío (se elige al crear el primero).
   const tipoRaiz: TipoUbicacion | null = useMemo(() => {
     const raiz = lugares.filter((l) => l.padreId === null)
     if (raiz.some((l) => l.tipo === 'PISO')) return 'PISO'
@@ -258,7 +257,7 @@ export function UbicacionesModal({
       open
       size="2xl"
       title={`Ubicaciones de ${almacen.nombre}`}
-      description="Pisos y cuartos o zonas. Sirve para saber dónde está cada producto."
+      description="Pisos y sus lugares. Sirve para saber dónde está cada producto."
       onClose={onClose}
       footer={
         <Button variant="secondary" size="sm" onClick={onClose}>
@@ -295,7 +294,7 @@ export function UbicacionesModal({
                     >
                       <Building2 size={18} className="text-[rgb(var(--sys-rgb))]" />
                       <p className="mt-1 text-sm font-semibold text-ink">Tiene pisos</p>
-                      <p className="text-xs text-ink-soft">Primero creas los pisos y después, adentro de cada uno, sus cuartos.</p>
+                      <p className="text-xs text-ink-soft">Primero creas los pisos y después, adentro de cada uno, sus lugares.</p>
                     </button>
                     <button
                       type="button"
@@ -304,7 +303,7 @@ export function UbicacionesModal({
                     >
                       <DoorOpen size={18} className="text-[rgb(var(--sys-rgb))]" />
                       <p className="mt-1 text-sm font-semibold text-ink">Un solo ambiente</p>
-                      <p className="text-xs text-ink-soft">Sin pisos: creas directo sus cuartos o zonas (cocina, abarrotes...).</p>
+                      <p className="text-xs text-ink-soft">Sin pisos: creas directo sus lugares (cocina, abarrotes...).</p>
                     </button>
                   </div>
                 )}
@@ -335,7 +334,7 @@ export function UbicacionesModal({
 
                         <span className="flex shrink-0 items-center">
                           {puedeCrear && l.activo && l.tipo === 'PISO' && (
-                            <RowAction label={`Agregar un cuarto en ${l.ruta}`} tone="success" onClick={() => nuevo(l, 'CUARTO')}>
+                            <RowAction label={`Agregar un lugar en ${l.ruta}`} tone="success" onClick={() => nuevo(l, 'CUARTO')}>
                               <FaPlus size={14} />
                             </RowAction>
                           )}

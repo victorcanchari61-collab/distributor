@@ -10,7 +10,7 @@ public class CrearUbicacionRequest
     public string Tipo { get; set; } = string.Empty;
 
     /// <summary>
-    /// El código corto de este punto ("P1", "C1"). Vacío: se pone solo, el siguiente número del nivel (P3 si ya hay
+    /// El código corto de este punto ("P1", "01"). Vacío: se pone solo, el siguiente número del nivel (P3 si ya hay
     /// P1 y P2). No se repite entre hermanos.
     /// </summary>
     public string? Codigo { get; set; }

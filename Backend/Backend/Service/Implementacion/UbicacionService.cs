@@ -13,7 +13,7 @@ namespace Backend.Service.Implementacion;
 /// Pisos y cuartos de un almacén, y dónde está cada producto.
 ///
 /// Son dos niveles: el piso y, adentro, el cuarto. Cada punto lleva su código; la "ruta" —los códigos de arriba
-/// hacia abajo unidos con guion, por ejemplo P1-C2— es como se nombra el lugar.
+/// hacia abajo unidos con guion, por ejemplo P1-02— es como se nombra el lugar.
 /// </summary>
 public class UbicacionService : IUbicacionService
 {
@@ -407,29 +407,32 @@ public class UbicacionService : IUbicacionService
     }
 
     /// <summary>
-    /// El próximo código libre de un nivel: P para pisos y C para cuartos, siguiendo el número más alto que ya haya
-    /// entre los hermanos (con P1 y P2 tomados, sale P3). Uno escrito a mano que no siga la serie ("AZ") no cuenta
-    /// para el número, pero tampoco se pisa.
+    /// El próximo código libre de un nivel, siguiendo el número más alto que ya haya entre los hermanos. Un piso lleva
+    /// P y su número (P1, P2...); lo de adentro, solo un número de dos cifras (01, 02...): el código dice DÓNDE está
+    /// (P1-01, piso 1 lugar 1), no qué es; eso lo dice el nombre (Cocina, Abarrotes, Estante). Uno escrito a mano
+    /// que no siga la serie ("AZ") no cuenta para el número, pero tampoco se pisa.
     /// </summary>
     private async Task<string> SiguienteCodigoAsync(int almacenId, int? padreId, string tipo)
     {
-        var prefijo = tipo == TipoUbicacion.Piso ? "P" : "C";
+        var esPiso = tipo == TipoUbicacion.Piso;
+        string Formar(int n) => esPiso ? $"P{n}" : n.ToString("00");
+        int Numero(string codigo)
+        {
+            var cifras = esPiso
+                ? codigo.StartsWith('P') || codigo.StartsWith('p') ? codigo[1..] : string.Empty
+                : codigo;
+            return cifras.Length > 0 && cifras.All(char.IsAsciiDigit) && int.TryParse(cifras, out var n) ? n : 0;
+        }
+
         var usados = await _context.UbicacionesAlmacen.AsNoTracking()
             .Where(u => u.AlmacenId == almacenId && u.PadreId == padreId)
             .Select(u => u.Codigo)
             .ToListAsync();
         var ocupados = usados.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var ultimo = usados
-            .Select(c => c.Length > prefijo.Length
-                         && c.StartsWith(prefijo, StringComparison.OrdinalIgnoreCase)
-                         && int.TryParse(c[prefijo.Length..], out var n) ? n : 0)
-            .DefaultIfEmpty(0)
-            .Max();
-
-        var n = ultimo + 1;
-        while (ocupados.Contains(prefijo + n)) n++;
-        return prefijo + n;
+        var siguiente = usados.Select(Numero).DefaultIfEmpty(0).Max() + 1;
+        while (ocupados.Contains(Formar(siguiente))) siguiente++;
+        return Formar(siguiente);
     }
 
     private async Task<UbicacionResponse> UnaAsync(int almacenId, int id) =>
