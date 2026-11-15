@@ -13,6 +13,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
@@ -118,7 +119,11 @@ class PrestamosPagina extends ConsumerWidget {
       fila: (context, prestamo) => _TarjetaPrestamo(
         prestamo: prestamo,
         color: color,
-        onDevolver: prestamo.estado == EstadoPrestamo.pendiente
+        // Ya devuelto: en gris con el motivo. Sin permiso: en gris con el
+        // aviso.
+        onDevolver:
+            prestamo.estado == EstadoPrestamo.pendiente ||
+                !puede(ref, 'inv.prestamos', Accion.confirmar)
             ? permitir(
                 puede(ref, 'inv.prestamos', Accion.confirmar),
                 () => mostrarHojaDevolucion(context, ref, prestamo: prestamo),
@@ -256,24 +261,30 @@ class _TarjetaPrestamo extends StatelessWidget {
       campos: [CampoDetalle('Contraparte', prestamo.contraparte), ..._campos],
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${prestamo.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${prestamo.numero}',
+          tono: TonoAccion.documento,
           onPressed: () => mostrarOpcionesPdf(
             context,
             documento: DocumentoPdf.prestamo,
             id: prestamo.id,
             numero: prestamo.numero,
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
-        if (onDevolver != null)
-          AppIconoAccion(
-            icono: Icons.undo,
-            tooltip: 'Registrar devolución',
-            color: Colores.exito,
-            onPressed: onDevolver,
-          ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Registrar devolución de ${prestamo.numero}',
+          tono: TonoAccion.aviso,
+          onPressed: onDevolver,
+          motivo: 'Ya fue devuelto',
+        ),
       ],
     );
   }

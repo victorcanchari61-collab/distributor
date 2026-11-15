@@ -5,6 +5,7 @@ import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -19,7 +20,6 @@ import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/compra.dart';
 import '../estado/compras_controlador.dart';
@@ -146,7 +146,9 @@ class MisComprasPagina extends ConsumerWidget {
                 () => _abrirFormulario(context, compra),
               )
             : null,
-        onRecibir: compra.detalle.any((d) => d.cantidadPendiente > 0)
+        onRecibir:
+            compra.estado == EstadoCompra.pendiente ||
+                compra.estado == EstadoCompra.recibidaParcial
             ? permitir(
                 puede(ref, 'compras.recepciones', Accion.crear),
                 () => _recibir(context, compra),
@@ -373,38 +375,50 @@ class _TarjetaCompra extends StatelessWidget {
       campos: _campos,
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${compra.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${compra.numero}',
+          tono: TonoAccion.documento,
           onPressed: () => mostrarOpcionesPdf(
             context,
             documento: DocumentoPdf.compra,
             id: compra.id,
             numero: compra.numero,
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onRecibir != null)
-          AppIconoAccion(
-            icono: Icons.move_to_inbox_outlined,
-            tooltip: 'Recibir',
-            color: Colores.exito,
-            onPressed: onRecibir,
-          ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar ${compra.numero}',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
+          motivo: compra.estado == EstadoCompra.anulada
+              ? 'Está anulada'
+              : 'Ya tiene mercadería recibida',
+        ),
+        AppBotonFila(
+          icono: Icons.inventory_2,
+          etiqueta: 'Recibir ${compra.numero}',
+          tono: TonoAccion.exito,
+          onPressed: onRecibir,
+          motivo: compra.estado == EstadoCompra.anulada
+              ? 'Está anulada'
+              : 'Ya se recibió completa',
+        ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular ${compra.numero}',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: compra.estado == EstadoCompra.anulada
+              ? 'Ya está anulada'
+              : 'Tiene recepciones: anula esas',
+        ),
       ],
     );
   }

@@ -5,6 +5,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
@@ -383,24 +384,36 @@ class _TarjetaDevolucion extends StatelessWidget {
       insignia: _estado,
       campos: _campos,
       onTap: () => _detalle(context),
+      // Como en el web: ver, aprobar y rechazar; ya resuelta, las dos últimas
+      // quedan en gris diciendo cómo se resolvió.
       acciones: [
-        if (onRechazar != null)
-          AppIconoAccion(
-            icono: Icons.close_rounded,
-            tooltip: 'Rechazar',
-            color: Colores.peligro,
-            onPressed: onRechazar,
-          ),
-        if (onAprobar != null)
-          AppIconoAccion(
-            icono: Icons.check_rounded,
-            tooltip: 'Aprobar',
-            color: Colores.exito,
-            onPressed: onAprobar,
-          ),
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver detalle',
+          tono: TonoAccion.ver,
+          onPressed: () => _detalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.check,
+          etiqueta: 'Aprobar',
+          tono: TonoAccion.exito,
+          onPressed: onAprobar,
+          motivo: _yaResuelta,
+        ),
+        AppBotonFila(
+          icono: Icons.close,
+          etiqueta: 'Rechazar',
+          tono: TonoAccion.peligro,
+          onPressed: onRechazar,
+          motivo: _yaResuelta,
+        ),
       ],
     );
   }
+
+  String get _yaResuelta => devolucion.estado == EstadoDevolucion.aprobada
+      ? 'Ya fue aprobada'
+      : 'Ya fue rechazada';
 
   Future<void> _detalle(BuildContext context) {
     return mostrarDetalle(

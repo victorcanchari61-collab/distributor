@@ -7,6 +7,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -16,7 +17,6 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -522,17 +522,17 @@ class _TarjetaDetalle extends StatelessWidget {
       ],
       acciones: [
         if (onBoleta != null)
-          AppIconoAccion(
-            icono: Icons.picture_as_pdf_outlined,
-            tooltip: 'Boleta',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.description,
+            etiqueta: 'Boleta',
+            tono: TonoAccion.neutral,
             onPressed: onBoleta,
           ),
         if (onAjustar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Ajustar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Ajustar',
+            tono: TonoAccion.editar,
             onPressed: onAjustar,
           ),
       ],
@@ -930,17 +930,13 @@ class _TarjetaHistorial extends StatelessWidget {
       ),
       onTap: onAbrir,
       acciones: [
-        if (onAbrir != null)
-          IconButton(
-            onPressed: onAbrir,
-            tooltip: 'Ver semana',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.visibility_outlined,
-              size: 18,
-              color: Colores.tintaSuave,
-            ),
-          ),
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver semana',
+          tono: TonoAccion.ver,
+          onPressed: onAbrir,
+          motivo: 'Está anulada: no se abre',
+        ),
       ],
     );
   }

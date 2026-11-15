@@ -6,6 +6,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -13,7 +14,6 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -21,7 +21,6 @@ import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/tesoreria.dart';
@@ -228,10 +227,10 @@ class IngresosEgresosPagina extends ConsumerWidget {
           CampoDetalle('Sale de', r.cuentaFinancieraSugerida),
         ],
         acciones: [
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${r.nombre}',
+            tono: TonoAccion.editar,
             onPressed: permitir(
               puedeEditar,
               () => abrirHojaFinanzas(
@@ -240,22 +239,23 @@ class IngresosEgresosPagina extends ConsumerWidget {
               ),
             ),
           ),
-          AppIconoAccion(
-            icono: r.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: r.activo ? 'Desactivar' : 'Activar',
-            color: Colores.advertencia,
-            onPressed: permitir(
-              puedeEditar,
-              () => _estadoRecurrente(context, ref, r),
-            ),
-          ),
-          AppIconoAccion(
-            icono: Icons.delete_outline,
-            tooltip: 'Eliminar',
-            color: Colores.advertencia,
+          AppBotonFila(
+            icono: Icons.delete,
+            etiqueta: 'Eliminar ${r.nombre}',
+            tono: TonoAccion.peligro,
             onPressed: permitir(
               puedeEliminar,
               () => _eliminarRecurrente(context, ref, r),
+            ),
+          ),
+          // El web lo cambia desde el formulario; aquí queda como botón.
+          AppBotonFila(
+            icono: r.activo ? Icons.block : Icons.check_circle,
+            etiqueta: '${r.activo ? 'Desactivar' : 'Activar'} ${r.nombre}',
+            tono: r.activo ? TonoAccion.aviso : TonoAccion.exito,
+            onPressed: permitir(
+              puedeEditar,
+              () => _estadoRecurrente(context, ref, r),
             ),
           ),
         ],
@@ -392,29 +392,35 @@ class IngresosEgresosPagina extends ConsumerWidget {
         ],
         acciones: [
           // Las del sistema las usa el propio sistema: no se tocan.
-          if (!c.esSistema)
-            AppIconoAccion(
-              icono: Icons.edit_outlined,
-              tooltip: 'Editar',
-              color: Acento.de(context),
-              onPressed: permitir(
-                puedeEditar,
-                () => abrirHojaFinanzas(
-                  context,
-                  (_) => _HojaCategoria(categoria: c),
-                ),
-              ),
-            ),
-          if (!c.esSistema && c.usos == 0)
-            AppIconoAccion(
-              icono: Icons.delete_outline,
-              tooltip: 'Eliminar',
-              color: Colores.advertencia,
-              onPressed: permitir(
-                puedeEliminar,
-                () => _eliminarCategoria(context, ref, c),
-              ),
-            ),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${c.nombre}',
+            tono: TonoAccion.editar,
+            onPressed: c.esSistema
+                ? null
+                : permitir(
+                    puedeEditar,
+                    () => abrirHojaFinanzas(
+                      context,
+                      (_) => _HojaCategoria(categoria: c),
+                    ),
+                  ),
+            motivo: 'Es del sistema: no se edita',
+          ),
+          AppBotonFila(
+            icono: Icons.delete,
+            etiqueta: 'Eliminar ${c.nombre}',
+            tono: TonoAccion.peligro,
+            onPressed: c.esSistema || c.usos > 0
+                ? null
+                : permitir(
+                    puedeEliminar,
+                    () => _eliminarCategoria(context, ref, c),
+                  ),
+            motivo: c.esSistema
+                ? 'Es del sistema: no se elimina'
+                : 'Ya se usó: desactívala en vez de eliminarla',
+          ),
         ],
       ),
     );

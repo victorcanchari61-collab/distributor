@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -356,30 +356,24 @@ class _TarjetaComprobante extends StatelessWidget {
 
   bool get _puedeConsultarBaja => _c.bajaEstado == EstadoBajaCpe.pendiente;
 
-  Future<void> _elegir(BuildContext context, String accion) async {
-    if (esValorSinPermiso(accion)) {
-      avisarSinPermiso(context);
-      return;
-    }
-    switch (accion) {
-      case 'xml':
-      case 'cdr':
-        final xml = accion == 'xml';
-        final error = await abrirPdfDeRuta(
-          ruta: '/comprobante/${_c.id}/$accion',
-          nombre: xml ? '${_c.nombreArchivo}.xml' : 'R-${_c.nombreArchivo}.zip',
-        );
-        if (error != null && context.mounted) Aviso.de(context).error(error);
-      case 'reenviar':
-        onReenviar();
-      case 'nota':
-        await abrirEmitirNota(context, _c, tiposNota);
-      case 'baja':
-        await abrirDarDeBaja(context, _c);
-      case 'consultar_baja':
-        onConsultarBaja();
-    }
+  /// Descarga el XML o el CDR (la respuesta de SUNAT) del comprobante.
+  Future<void> _descargar(BuildContext context, {required bool xml}) async {
+    final error = await abrirPdfDeRuta(
+      ruta: '/comprobante/${_c.id}/${xml ? 'xml' : 'cdr'}',
+      nombre: xml ? '${_c.nombreArchivo}.xml' : 'R-${_c.nombreArchivo}.zip',
+    );
+    if (error != null && context.mounted) Aviso.de(context).error(error);
   }
+
+  Future<void> _verDetalle(BuildContext context) => mostrarDetalle(
+    context,
+    icono: _icono(_c.tipo),
+    color: color,
+    titulo: _c.numeroCompleto,
+    subtitulo: _c.clienteNombre,
+    estado: _estado,
+    campos: _campos,
+  );
 
   Widget get _estado =>
       AppEtiqueta(EstadoCpe.etiqueta(_c.estado), tono: _tonoEstado(_c.estado));
@@ -392,19 +386,21 @@ class _TarjetaComprobante extends StatelessWidget {
       titulo: _c.numeroCompleto,
       estado: _estado,
       campos: _campos,
-      onTap: () => mostrarDetalle(
-        context,
-        icono: _icono(_c.tipo),
-        color: color,
-        titulo: _c.numeroCompleto,
-        subtitulo: _c.clienteNombre,
-        estado: _estado,
-        campos: _campos,
-      ),
+      onTap: () => _verDetalle(context),
+      // Los mismos botones, en el mismo orden y color que la fila del panel
+      // web. Como allá, los que el estado del comprobante no admite no se
+      // muestran; los que faltan por permiso salen en gris y avisan al tocarlos.
       acciones: [
-        AppIconoAccion(
-          icono: Icons.picture_as_pdf_outlined,
-          tooltip: 'PDF',
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${_c.numeroCompleto}',
+          tono: TonoAccion.ver,
+          onPressed: () => _verDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${_c.numeroCompleto}',
+          tono: TonoAccion.documento,
           onPressed: permitir(
             puedeExportar,
             () => mostrarOpcionesPdf(
@@ -415,50 +411,66 @@ class _TarjetaComprobante extends StatelessWidget {
             ),
           ),
         ),
+        AppBotonFila(
+          icono: Icons.code,
+          etiqueta: 'Descargar XML',
+          tono: TonoAccion.editar,
+          onPressed: permitir(
+            puedeExportar,
+            () => _descargar(context, xml: true),
+          ),
+        ),
+        if (_c.tieneCdr)
+          AppBotonFila(
+            icono: Icons.folder_zip,
+            etiqueta: 'Descargar CDR',
+            tono: TonoAccion.editar,
+            onPressed: permitir(
+              puedeExportar,
+              () => _descargar(context, xml: false),
+            ),
+          ),
         if (_c.aceptado)
-          AppIconoAccion(
-            icono: Icons.send_outlined,
-            tooltip: 'Enviar documento por WhatsApp',
-            color: Colores.exito,
+          AppBotonFila(
+            icono: Icons.chat,
+            etiqueta: 'Enviar documento por WhatsApp',
+            tono: TonoAccion.exito,
             onPressed: permitir(
               puedeExportar,
               () => abrirEnvioWhatsApp(context, _c),
             ),
           ),
-        // XML, CDR, reenvio a SUNAT y notas: en un menu, porque en la esquina
-        // de la tarjeta no caben tantos iconos. Lo que falta por permiso sale
-        // en gris y avisa al tocarlo.
-        PopupMenuButton<String>(
-          tooltip: 'Más',
-          padding: EdgeInsets.zero,
-          icon: const Icon(Icons.more_vert, size: 18),
-          onSelected: (v) => _elegir(context, v),
-          itemBuilder: (_) => [
-            itemMenu('xml', 'Descargar XML', permitido: puedeExportar),
-            if (_c.tieneCdr)
-              itemMenu('cdr', 'Descargar CDR', permitido: puedeExportar),
-            if (_c.estado == EstadoCpe.generado || _c.estado == EstadoCpe.error)
-              itemMenu(
-                'reenviar',
-                'Reenviar a SUNAT',
-                permitido: puedeReenviar,
-              ),
-            if (ofreceNota)
-              itemMenu(
-                'nota',
-                'Emitir nota de crédito o débito',
-                permitido: tiposNota.isNotEmpty,
-              ),
-            if (_puedeDarDeBaja)
-              itemMenu('baja', 'Dar de baja', permitido: puedeAnular),
-            if (_puedeConsultarBaja)
-              itemMenu(
-                'consultar_baja',
-                'Consultar la baja en SUNAT',
-                permitido: puedeAnular,
-              ),
-          ],
-        ),
+        if (_c.estado == EstadoCpe.generado || _c.estado == EstadoCpe.error)
+          AppBotonFila(
+            icono: Icons.sync,
+            etiqueta: 'Reenviar a SUNAT',
+            tono: TonoAccion.aviso,
+            onPressed: permitir(puedeReenviar, onReenviar),
+          ),
+        if (_puedeDarDeBaja)
+          AppBotonFila(
+            icono: Icons.cancel,
+            etiqueta: 'Dar de baja',
+            tono: TonoAccion.peligro,
+            onPressed: permitir(puedeAnular, () => abrirDarDeBaja(context, _c)),
+          ),
+        if (_puedeConsultarBaja)
+          AppBotonFila(
+            icono: Icons.sync,
+            etiqueta: 'Consultar la baja en SUNAT',
+            tono: TonoAccion.aviso,
+            onPressed: permitir(puedeAnular, onConsultarBaja),
+          ),
+        if (ofreceNota)
+          AppBotonFila(
+            icono: Icons.edit_document,
+            etiqueta: 'Emitir nota de crédito o débito',
+            tono: TonoAccion.editar,
+            onPressed: permitir(
+              tiposNota.isNotEmpty,
+              () => abrirEmitirNota(context, _c, tiposNota),
+            ),
+          ),
       ],
     );
   }

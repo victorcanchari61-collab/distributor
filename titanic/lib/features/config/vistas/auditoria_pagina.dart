@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_acciones_flotantes.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
@@ -232,23 +233,34 @@ class _TarjetaAuditoria extends StatelessWidget {
       tono: _tonoAccion(registro.accion),
     );
 
+    void verCambios() => mostrarDetalle(
+      context,
+      icono: Icons.history_outlined,
+      color: color,
+      titulo: '${registro.entidad} #${registro.entidadId}',
+      subtitulo:
+          '${_fechaHora(registro.fecha.toLocal())} · ${registro.usuario}',
+      insignia: insignia,
+      campos: _campos,
+      contenidoExtra: _cambios,
+    );
+
     return AppTarjetaRegistro(
       icono: Icons.history_outlined,
       color: color,
       titulo: registro.entidad,
       insignia: insignia,
       campos: _campos,
-      onTap: () => mostrarDetalle(
-        context,
-        icono: Icons.history_outlined,
-        color: color,
-        titulo: '${registro.entidad} #${registro.entidadId}',
-        subtitulo:
-            '${_fechaHora(registro.fecha.toLocal())} · ${registro.usuario}',
-        insignia: insignia,
-        campos: _campos,
-        contenidoExtra: _cambios,
-      ),
+      onTap: verCambios,
+      // Como en el web: la fila lleva su botón de ver los cambios.
+      acciones: [
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver cambios',
+          tono: TonoAccion.ver,
+          onPressed: verCambios,
+        ),
+      ],
     );
   }
 }

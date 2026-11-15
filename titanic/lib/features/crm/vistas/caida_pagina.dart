@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../compartido/exportar_excel.dart';
 import '../../../compartido/fechas.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/permisos.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../maestros/vistas/categorizacion_hoja.dart';
@@ -338,42 +338,32 @@ class _TarjetaCaida extends StatelessWidget {
                 ),
         ),
       ],
+      // El orden de la fila del web: gestionar, qué dejó de comprar y, si
+      // tiene teléfono, WhatsApp.
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.search,
+          etiqueta: 'Gestionar',
+          tono: TonoAccion.ver,
+          onPressed: () => _gestionar(context),
+        ),
+        AppBotonFila(
+          icono: Icons.search,
+          etiqueta: 'Qué dejó de comprar',
+          tono: TonoAccion.aviso,
           onPressed: () => mostrarQueDejoDeComprar(
             context,
             clienteId: f.id,
             cliente: f.cliente,
           ),
-          tooltip: 'Qué dejó de comprar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            Icons.inventory_2_outlined,
-            size: 19,
-            color: Acento.de(context),
-          ),
         ),
         if (f.telefono != null && f.telefono!.trim().isNotEmpty)
-          IconButton(
+          AppBotonFila(
+            icono: Icons.chat,
+            etiqueta: 'WhatsApp',
+            tono: TonoAccion.exito,
             onPressed: () => abrirWhatsapp(context, f.telefono!),
-            tooltip: 'WhatsApp',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(
-              Icons.chat_outlined,
-              size: 19,
-              color: Colores.exito,
-            ),
           ),
-        IconButton(
-          onPressed: () => _gestionar(context),
-          tooltip: 'Gestionar',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            Icons.person_search_outlined,
-            size: 19,
-            color: Acento.de(context),
-          ),
-        ),
       ],
     );
   }

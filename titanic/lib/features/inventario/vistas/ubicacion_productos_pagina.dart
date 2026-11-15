@@ -12,6 +12,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -337,17 +338,13 @@ class _TarjetaProducto extends StatelessWidget {
       ),
       acciones: [
         if (onPoner != null)
-          IconButton(
+          AppBotonFila(
+            icono: producto.sinLugar
+                ? Icons.add_location_alt
+                : Icons.edit_location_alt,
+            etiqueta: producto.sinLugar ? 'Poner en un lugar' : 'Mover',
+            tono: TonoAccion.editar,
             onPressed: onPoner,
-            tooltip: producto.sinLugar ? 'Poner en un lugar' : 'Mover',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              producto.sinLugar
-                  ? Icons.add_location_alt_outlined
-                  : Icons.edit_location_alt_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
           ),
       ],
     );

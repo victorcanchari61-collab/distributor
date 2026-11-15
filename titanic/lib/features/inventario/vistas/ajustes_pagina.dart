@@ -14,13 +14,12 @@ import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/documento_inventario.dart';
 import '../datos/motivo.dart';
@@ -147,7 +146,8 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
         doc: doc,
         color: color,
         conPdf: puedeExportar,
-        onAnular: doc.anulado
+        // Anulado: en gris con el motivo. Sin permiso: en gris con el aviso.
+        onAnular: doc.anulado && puedeAnular
             ? null
             : permitir(puedeAnular, () => _anularAjuste(doc)),
       ),
@@ -306,8 +306,10 @@ class _AjustesPaginaState extends ConsumerState<AjustesPagina> {
               : permitir(puedeEditar, () => _cambiarEstadoMotivo(motivo)),
           // Va con "editar" y no con "eliminar", como en la web: inv.ajustes
           // no declara esa accion porque un ajuste no se borra, se anula.
-          // Solo sin movimientos: lo que ya se usa se desactiva.
-          onEliminar: !motivo.delSistema && motivo.movimientos == 0
+          // Solo sin movimientos: lo que ya se usa se desactiva (en gris con
+          // el motivo; sin permiso, en gris con el aviso).
+          onEliminar:
+              !motivo.delSistema && (motivo.movimientos == 0 || !puedeEditar)
               ? permitir(puedeEditar, () => _eliminarMotivo(motivo))
               : null,
         );
@@ -473,19 +475,18 @@ class _TarjetaAjuste extends StatelessWidget {
         tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),
       campos: _campos,
-      onTap: () => mostrarDetalle(
-        context,
-        icono: Icons.fact_check_outlined,
-        color: color,
-        titulo: doc.numero,
-        subtitulo: doc.motivo,
-        campos: _campos,
-        contenidoExtra: _lineas,
-      ),
+      onTap: () => _abrirDetalle(context),
       acciones: [
-        AppIconoAccion(
-          icono: Icons.picture_as_pdf_outlined,
-          tooltip: 'PDF',
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${doc.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${doc.numero}',
+          tono: TonoAccion.documento,
           onPressed: permitir(
             conPdf,
             () => mostrarOpcionesPdf(
@@ -496,16 +497,26 @@ class _TarjetaAjuste extends StatelessWidget {
             ),
           ),
         ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.advertencia,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular ${doc.numero}',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: 'Ya está anulado',
+        ),
       ],
     );
   }
+
+  Future<void> _abrirDetalle(BuildContext context) => mostrarDetalle(
+    context,
+    icono: Icons.fact_check_outlined,
+    color: color,
+    titulo: doc.numero,
+    subtitulo: doc.motivo,
+    campos: _campos,
+    contenidoExtra: _lineas,
+  );
 }
 
 class _TarjetaMotivo extends StatelessWidget {
@@ -562,25 +573,29 @@ class _TarjetaMotivo extends StatelessWidget {
       onTap: esSinPermiso(onEditar) ? null : onEditar,
       acciones: [
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${motivo.nombre}',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
         if (onEstado != null)
-          AppIconoAccion(
-            icono: motivo.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: motivo.activo ? 'Desactivar' : 'Activar',
-            color: Colores.advertencia,
+          AppBotonFila(
+            icono: motivo.activo ? Icons.block : Icons.check_circle,
+            etiqueta:
+                '${motivo.activo ? 'Desactivar' : 'Activar'} ${motivo.nombre}',
+            tono: motivo.activo ? TonoAccion.aviso : TonoAccion.exito,
             onPressed: onEstado,
           ),
-        if (onEliminar != null)
-          AppIconoAccion(
-            icono: Icons.delete_outline,
-            tooltip: 'Eliminar',
-            color: Colores.advertencia,
+        // El del sistema no tiene acciones; el que ya tiene movimientos se ve
+        // en gris: se desactiva, no se borra.
+        if (!motivo.delSistema)
+          AppBotonFila(
+            icono: Icons.delete,
+            etiqueta: 'Eliminar ${motivo.nombre}',
+            tono: TonoAccion.peligro,
             onPressed: onEliminar,
+            motivo: 'Tiene movimientos: desactívalo en vez de eliminarlo',
           ),
       ],
     );

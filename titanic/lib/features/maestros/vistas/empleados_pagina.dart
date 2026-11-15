@@ -10,6 +10,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -18,7 +19,6 @@ import '../../../core/navegacion/menu.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/empleado.dart';
 import '../estado/maestros_controlador.dart';
@@ -397,25 +397,31 @@ class _TarjetaEmpleado extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar a ${empleado.nombreCompleto}',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
         if (onEstado != null)
-          AppIconoAccion(
-            icono: empleado.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: empleado.activo ? 'Desactivar' : 'Activar',
-            color: empleado.activo ? Colores.advertencia : Colores.exito,
+          AppBotonFila(
+            icono: empleado.activo ? Icons.block : Icons.check_circle,
+            etiqueta:
+                '${empleado.activo ? 'Desactivar' : 'Activar'} a ${empleado.nombreCompleto}',
+            tono: empleado.activo ? TonoAccion.aviso : TonoAccion.exito,
             onPressed: onEstado,
           ),
         if (onEliminar != null)
-          AppIconoAccion(
-            icono: Icons.delete_outline,
-            tooltip: 'Eliminar',
-            color: Colores.peligro,
-            onPressed: onEliminar,
+          AppBotonFila(
+            icono: Icons.delete,
+            etiqueta: 'Eliminar a ${empleado.nombreCompleto}',
+            tono: TonoAccion.peligro,
+            // Con cuenta enlazada no se puede borrar: se ve en gris con el
+            // motivo, como en el web (sin permiso manda el aviso de permiso).
+            onPressed: empleado.usuarioId == null || esSinPermiso(onEliminar)
+                ? onEliminar
+                : null,
+            motivo: 'Tiene un usuario enlazado',
           ),
       ],
     );

@@ -3,20 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_aviso.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_linea_producto.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/solicitud_compra.dart';
 import '../estado/compras_controlador.dart';
@@ -344,26 +343,33 @@ class _TarjetaSolicitud extends StatelessWidget {
         ..._campos(solicitud).where((c) => c.etiqueta != 'Urgencia'),
       ],
       onTap: onVer,
+      // Como en el web: lo que no aplica al estado no se ofrece.
       acciones: [
-        if (onEnviar != null)
-          AppIconoAccion(
-            icono: Icons.send_outlined,
-            tooltip: 'Enviar al administrador',
-            color: Colores.exito,
-            onPressed: onEnviar,
-          ),
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${solicitud.numero}',
+          tono: TonoAccion.ver,
+          onPressed: onVer,
+        ),
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${solicitud.numero}',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
+        if (onEnviar != null)
+          AppBotonFila(
+            icono: Icons.send,
+            etiqueta: 'Enviar ${solicitud.numero} al administrador',
+            tono: TonoAccion.exito,
+            onPressed: onEnviar,
+          ),
         if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
+          AppBotonFila(
+            icono: Icons.undo,
+            etiqueta: 'Anular ${solicitud.numero}',
+            tono: TonoAccion.peligro,
             onPressed: onAnular,
           ),
       ],

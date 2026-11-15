@@ -5,6 +5,7 @@ import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -19,7 +20,6 @@ import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/orden_compra.dart';
 import '../estado/compras_controlador.dart';
@@ -150,7 +150,7 @@ class OrdenesCompraPagina extends ConsumerWidget {
                 () => _confirmar(context, ref, orden),
               )
             : null,
-        onAnular: orden.estado != EstadoOrdenCompra.anulada
+        onAnular: orden.estado == EstadoOrdenCompra.pendiente
             ? permitir(
                 puede(ref, 'compras.ordenes', Accion.anular),
                 () => _anular(context, ref, orden),
@@ -319,38 +319,48 @@ class _TarjetaOrden extends StatelessWidget {
       campos: [CampoDetalle('Proveedor', orden.proveedor), ..._campos],
       onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${orden.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${orden.numero}',
+          tono: TonoAccion.documento,
           onPressed: () => mostrarOpcionesPdf(
             context,
             documento: DocumentoPdf.ordenCompra,
             id: orden.id,
             numero: orden.numero,
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
-        if (onConfirmar != null)
-          AppIconoAccion(
-            icono: Icons.shopping_bag_outlined,
-            tooltip: 'Convertir a compra',
-            color: Colores.exito,
-            onPressed: onConfirmar,
-          ),
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar ${orden.numero}',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
+          motivo: 'Solo se edita una orden pendiente',
+        ),
+        AppBotonFila(
+          icono: Icons.shopping_bag,
+          etiqueta: 'Convertir ${orden.numero} a compra',
+          tono: TonoAccion.exito,
+          onPressed: onConfirmar,
+          motivo: orden.estado == EstadoOrdenCompra.confirmada
+              ? 'Ya se convirtió en compra'
+              : 'Está anulada',
+        ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular ${orden.numero}',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: orden.estado == EstadoOrdenCompra.confirmada
+              ? 'Ya generó su compra: anula esa'
+              : 'Ya está anulada',
+        ),
       ],
     );
   }

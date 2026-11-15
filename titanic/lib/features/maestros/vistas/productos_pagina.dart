@@ -16,6 +16,7 @@ import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
@@ -614,17 +615,18 @@ class _TarjetaProducto extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${producto.nombre}',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
         if (onEstado != null)
-          AppIconoAccion(
-            icono: producto.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: producto.activo ? 'Desactivar' : 'Activar',
-            color: Colores.advertencia,
+          AppBotonFila(
+            icono: producto.activo ? Icons.block : Icons.check_circle,
+            etiqueta:
+                '${producto.activo ? 'Desactivar' : 'Activar'} ${producto.nombre}',
+            tono: producto.activo ? TonoAccion.aviso : TonoAccion.exito,
             onPressed: onEstado,
           ),
       ],

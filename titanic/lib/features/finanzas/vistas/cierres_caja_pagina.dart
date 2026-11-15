@@ -5,6 +5,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -12,7 +13,6 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -310,24 +310,24 @@ class _TarjetaCobro extends StatelessWidget {
       ],
       acciones: [
         if (onVerificar != null)
-          AppIconoAccion(
-            icono: Icons.check_circle_outline,
-            tooltip: 'Verificar: apareció en el banco',
-            color: Colores.exito,
+          AppBotonFila(
+            icono: Icons.check_circle,
+            etiqueta: 'Verificar: apareció en el banco',
+            tono: TonoAccion.exito,
             onPressed: onVerificar,
           ),
         if (onRechazar != null)
-          AppIconoAccion(
-            icono: Icons.cancel_outlined,
-            tooltip: 'Rechazar: no apareció',
-            color: Colores.peligro,
+          AppBotonFila(
+            icono: Icons.cancel,
+            etiqueta: 'Rechazar: no apareció',
+            tono: TonoAccion.peligro,
             onPressed: onRechazar,
           ),
         if (onQuitar != null)
-          AppIconoAccion(
+          AppBotonFila(
             icono: Icons.undo,
-            tooltip: 'Quitar la verificación',
-            color: Colores.tintaSuave,
+            etiqueta: 'Quitar la verificación',
+            tono: TonoAccion.neutral,
             onPressed: onQuitar,
           ),
       ],
@@ -530,18 +530,19 @@ class _TarjetaCierre extends StatelessWidget {
         CampoDetalle('Observación', c.observacion),
       ],
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver el detalle del cierre',
+          tono: TonoAccion.ver,
           onPressed: onVer,
-          tooltip: 'Ver el detalle del cierre',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.visibility_outlined, size: 18, color: color),
         ),
         if (onAnular != null)
-          AppIconoAccion(
+          AppBotonFila(
             icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.advertencia,
-            onPressed: onAnular,
+            etiqueta: 'Anular cierre',
+            tono: TonoAccion.peligro,
+            onPressed: c.descontadoEnPlanilla > 0 ? null : onAnular,
+            motivo: 'Su faltante ya se descontó en una planilla pagada',
           ),
       ],
     );

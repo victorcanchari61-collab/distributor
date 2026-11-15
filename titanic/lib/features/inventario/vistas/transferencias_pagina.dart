@@ -12,8 +12,8 @@ import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
@@ -125,7 +125,8 @@ class TransferenciasPagina extends ConsumerWidget {
       fila: (context, doc) => _TarjetaTransferencia(
         doc: doc,
         color: color,
-        onAnular: doc.anulado
+        // Anulada: en gris con el motivo. Sin permiso: en gris con el aviso.
+        onAnular: doc.anulado && puede(ref, 'inv.transferencias', Accion.anular)
             ? null
             : permitir(
                 puede(ref, 'inv.transferencias', Accion.anular),
@@ -282,35 +283,43 @@ class _TarjetaTransferencia extends StatelessWidget {
         tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),
       campos: _campos,
-      onTap: () => mostrarDetalle(
-        context,
-        icono: Icons.local_shipping_outlined,
-        color: color,
-        titulo: doc.numero,
-        subtitulo: '${doc.almacen} → ${doc.almacenDestino ?? ''}',
-        campos: _campos,
-        contenidoExtra: _lineas,
-      ),
+      onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${doc.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${doc.numero}',
+          tono: TonoAccion.documento,
           onPressed: () => mostrarOpcionesPdf(
             context,
             documento: DocumentoPdf.transferencia,
             id: doc.id,
             numero: doc.numero,
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular ${doc.numero}',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: 'Ya está anulada',
+        ),
       ],
     );
   }
+
+  Future<void> _abrirDetalle(BuildContext context) => mostrarDetalle(
+    context,
+    icono: Icons.local_shipping_outlined,
+    color: color,
+    titulo: doc.numero,
+    subtitulo: '${doc.almacen} → ${doc.almacenDestino ?? ''}',
+    campos: _campos,
+    contenidoExtra: _lineas,
+  );
 }

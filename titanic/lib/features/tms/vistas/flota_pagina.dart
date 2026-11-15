@@ -9,14 +9,13 @@ import '../../../compartido/estado/filtro_estado.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/flota.dart';
@@ -513,30 +512,24 @@ class _TarjetaVehiculo extends StatelessWidget {
       campos: _campos,
       onTap: onVer,
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver detalle',
+          tono: TonoAccion.ver,
           onPressed: onVer,
-          tooltip: 'Ver detalle',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(
-            Icons.visibility_outlined,
-            size: 18,
-            color: Colores.tintaSuave,
-          ),
         ),
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onEstado != null)
-          AppIconoAccion(
-            icono: vehiculo.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: vehiculo.activo ? 'Desactivar' : 'Activar',
-            color: vehiculo.activo ? Colores.advertencia : Colores.exito,
-            onPressed: onEstado,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
+        ),
+        AppBotonFila(
+          icono: vehiculo.activo ? Icons.block : Icons.check_circle,
+          etiqueta: vehiculo.activo ? 'Desactivar' : 'Activar',
+          tono: vehiculo.activo ? TonoAccion.aviso : TonoAccion.exito,
+          onPressed: onEstado,
+        ),
       ],
     );
   }

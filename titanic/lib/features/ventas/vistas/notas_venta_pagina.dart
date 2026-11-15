@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -11,7 +12,6 @@ import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -388,31 +388,42 @@ class _TarjetaNotaVenta extends StatelessWidget {
       ),
       campos: _campos,
       onTap: () => _abrirDetalle(context),
+      // Los mismos botones, en el mismo orden y color que la fila del panel
+      // web; los que no aplican a la venta se ven en gris con su motivo.
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${nota.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${nota.numero}',
+          tono: TonoAccion.documento,
           onPressed: () => mostrarOpcionesPdf(
             context,
             documento: DocumentoPdf.notaVenta,
             id: nota.id,
             numero: nota.numero,
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
-        if (onFacturar != null)
-          AppIconoAccion(
-            icono: Icons.receipt_long_outlined,
-            tooltip: 'Facturar',
-            onPressed: onFacturar,
-          ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.receipt_long,
+          etiqueta: 'Facturar ${nota.numero}',
+          tono: TonoAccion.editar,
+          onPressed: onFacturar,
+          motivo: nota.estado != EstadoNotaVenta.confirmada
+              ? 'Está anulada'
+              : 'Ya tiene su comprobante ${nota.comprobanteNumero}',
+        ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular ${nota.numero}',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: 'Ya está anulada',
+        ),
       ],
     );
   }

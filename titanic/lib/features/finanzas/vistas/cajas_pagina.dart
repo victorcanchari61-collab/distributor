@@ -6,6 +6,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -13,7 +14,6 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -21,7 +21,6 @@ import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../config/estado/config_controlador.dart';
@@ -468,26 +467,21 @@ class _TarjetaCaja extends StatelessWidget {
       onTap: () =>
           abrirHojaFinanzas(context, (_) => HojaMovimientosCuenta(cuenta: c)),
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.history,
+          etiqueta: 'Movimientos de ${c.nombre}',
+          tono: TonoAccion.ver,
           onPressed: () => abrirHojaFinanzas(
             context,
             (_) => HojaMovimientosCuenta(cuenta: c),
           ),
-          tooltip: 'Movimientos',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            Icons.receipt_long_outlined,
-            size: 18,
-            color: Acento.de(context),
-          ),
         ),
-        if (onEstado != null)
-          AppIconoAccion(
-            icono: c.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: c.activo ? 'Desactivar' : 'Activar',
-            color: Colores.advertencia,
-            onPressed: onEstado,
-          ),
+        AppBotonFila(
+          icono: c.activo ? Icons.block : Icons.check_circle,
+          etiqueta: '${c.activo ? 'Desactivar' : 'Activar'} ${c.nombre}',
+          tono: c.activo ? TonoAccion.aviso : TonoAccion.exito,
+          onPressed: onEstado,
+        ),
       ],
     );
   }

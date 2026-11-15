@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -22,7 +23,6 @@ import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/cliente_api.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/despacho.dart';
 import '../datos/despacho_api.dart';
@@ -344,10 +344,19 @@ class _TarjetaDespacho extends StatelessWidget {
       ),
       campos: _campos,
       onTap: () => _abrirDetalle(context),
+      // El mismo orden que la fila del web: ver, los tres papeles, editar y
+      // anular. Lo que no aplica al despacho queda en gris con su motivo.
       acciones: [
-        AppIconoAccion(
-          icono: Icons.picture_as_pdf_outlined,
-          tooltip: 'PDF de pedidos',
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver detalle',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de pedidos',
+          tono: TonoAccion.documento,
           onPressed: permitir(
             puedeExportar,
             () => _descargarYAbrir(
@@ -357,9 +366,10 @@ class _TarjetaDespacho extends StatelessWidget {
             ),
           ),
         ),
-        AppIconoAccion(
-          icono: Icons.inventory_2_outlined,
-          tooltip: 'Reporte de carga',
+        AppBotonFila(
+          icono: Icons.inventory_2,
+          etiqueta: 'Reporte de carga',
+          tono: TonoAccion.neutral,
           onPressed: permitir(
             puedeExportar,
             () => mostrarReporteCarga(
@@ -369,9 +379,10 @@ class _TarjetaDespacho extends StatelessWidget {
             ),
           ),
         ),
-        AppIconoAccion(
-          icono: Icons.receipt_long_outlined,
-          tooltip: 'Detalle por cliente',
+        AppBotonFila(
+          icono: Icons.assignment,
+          etiqueta: 'Detalle por cliente',
+          tono: TonoAccion.documento,
           onPressed: permitir(
             puedeExportar,
             () => _descargarYAbrir(
@@ -381,20 +392,22 @@ class _TarjetaDespacho extends StatelessWidget {
             ),
           ),
         ),
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
+          motivo: 'Está anulado',
+        ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: despacho.anulado
+              ? 'Ya está anulado'
+              : 'Ya tiene entregas facturadas',
+        ),
       ],
     );
   }

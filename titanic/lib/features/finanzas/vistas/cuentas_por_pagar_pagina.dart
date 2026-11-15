@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -11,7 +12,6 @@ import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../ventas/estado/ventas_controlador.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -185,13 +185,12 @@ class _TarjetaCuentaPagar extends StatelessWidget {
         ),
       ],
       acciones: [
-        if (onGestionarPagos != null)
-          AppIconoAccion(
-            icono: Icons.request_quote_outlined,
-            tooltip: 'Gestionar pagos',
-            color: Acento.de(context),
-            onPressed: onGestionarPagos,
-          ),
+        AppBotonFila(
+          icono: Icons.payments,
+          etiqueta: 'Gestionar pagos de ${compra.numero}',
+          tono: TonoAccion.exito,
+          onPressed: onGestionarPagos,
+        ),
       ],
     );
   }

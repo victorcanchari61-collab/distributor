@@ -5,13 +5,13 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -19,7 +19,6 @@ import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/apoyo.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../datos/tesoreria.dart';
@@ -211,26 +210,27 @@ class _TarjetaPrestamo extends StatelessWidget {
         CampoDetalle('Descripción', p.descripcion),
       ],
       acciones: [
+        AppBotonFila(
+          icono: Icons.list,
+          etiqueta: 'Pagos de ${p.acreedor}',
+          tono: TonoAccion.ver,
+          onPressed: onPagos,
+          motivo: 'Todavía no tiene pagos',
+        ),
         if (onPagar != null)
-          AppIconoAccion(
-            icono: Icons.payments_outlined,
-            tooltip: 'Registrar pago',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.payments,
+            etiqueta: 'Registrar pago a ${p.acreedor}',
+            tono: TonoAccion.exito,
             onPressed: onPagar,
           ),
-        if (onPagos != null)
-          AppIconoAccion(
-            icono: Icons.receipt_long_outlined,
-            tooltip: 'Ver pagos',
-            color: Acento.de(context),
-            onPressed: onPagos,
-          ),
-        if (onAnular != null)
-          AppIconoAccion(
+        if (p.estado != EstadoPrestamo.anulado)
+          AppBotonFila(
             icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.advertencia,
+            etiqueta: 'Anular préstamo de ${p.acreedor}',
+            tono: TonoAccion.peligro,
             onPressed: onAnular,
+            motivo: 'Tiene pagos: anúlalos primero',
           ),
       ],
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_acciones_flotantes.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
@@ -550,19 +551,20 @@ class _TarjetaAsistencia extends StatelessWidget {
       insignia: _insignia,
       campos: _campos,
       onTap: () => _abrirDetalle(context),
+      // Como en el web: una marca anulada no lleva acciones.
       acciones: [
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Corregir',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Corregir',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
         if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.advertencia,
+          AppBotonFila(
+            icono: Icons.undo,
+            etiqueta: 'Anular',
+            tono: TonoAccion.peligro,
             onPressed: onAnular,
           ),
       ],

@@ -16,8 +16,8 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -673,29 +673,26 @@ class _TarjetaNovedad extends StatelessWidget {
         CampoDetalle('Fecha', _fecha(n.fecha)),
       ],
       onTap: onVer,
+      // Como en el web: revisar solo sale pendiente y reabrir solo revisada.
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver detalle',
+          tono: TonoAccion.ver,
           onPressed: onVer,
-          tooltip: 'Ver detalle',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(
-            Icons.visibility_outlined,
-            size: 18,
-            color: Colores.tintaSuave,
-          ),
         ),
         if (onRevisar != null)
-          AppIconoAccion(
-            icono: Icons.fact_check_outlined,
-            tooltip: n.esRecojo ? 'Verificar' : 'Revisar',
-            color: Colores.exito,
+          AppBotonFila(
+            icono: Icons.assignment_turned_in,
+            etiqueta: n.esRecojo ? 'Verificar' : 'Revisar',
+            tono: TonoAccion.exito,
             onPressed: onRevisar,
           ),
         if (onReabrir != null)
-          AppIconoAccion(
-            icono: Icons.replay,
-            tooltip: 'Reabrir la revisión',
-            color: Colores.advertencia,
+          AppBotonFila(
+            icono: Icons.undo,
+            etiqueta: 'Reabrir la revisión',
+            tono: TonoAccion.aviso,
             onPressed: onReabrir,
           ),
       ],

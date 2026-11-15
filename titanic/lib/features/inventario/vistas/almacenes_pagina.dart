@@ -10,12 +10,12 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/almacen.dart';
 import '../estado/inventario_controlador.dart';
@@ -228,19 +228,20 @@ class _TarjetaAlmacen extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${almacen.nombre}',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
         // El principal siempre esta activo: no se ofrece apagarlo.
         if (!almacen.esPrincipal)
           if (onEstado != null)
-            AppIconoAccion(
-              icono: almacen.activo ? Icons.block : Icons.check_circle_outline,
-              tooltip: almacen.activo ? 'Desactivar' : 'Activar',
-              color: almacen.activo ? Colores.advertencia : Colores.exito,
+            AppBotonFila(
+              icono: almacen.activo ? Icons.block : Icons.check_circle,
+              etiqueta:
+                  '${almacen.activo ? 'Desactivar' : 'Activar'} ${almacen.nombre}',
+              tono: almacen.activo ? TonoAccion.aviso : TonoAccion.exito,
               onPressed: onEstado,
             ),
       ],

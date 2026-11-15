@@ -12,8 +12,8 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -112,8 +112,9 @@ class UnidadesPestana extends ConsumerWidget {
         color: color,
         onEditar: permitir(puedeEditar, () => _abrirHoja(context, color, u)),
         // Solo las que se pueden borrar: las del sistema y las que ya se usan
-        // el backend las rechaza.
-        onEliminar: u.usos == 0 && !u.delSistema
+        // el backend las rechaza (se ven en gris con el motivo). Sin permiso,
+        // en gris con el aviso de permiso.
+        onEliminar: !puedeEliminar || (u.usos == 0 && !u.delSistema)
             ? permitir(puedeEliminar, () => _eliminar(context, ref, u))
             : null,
       ),
@@ -254,19 +255,21 @@ class _TarjetaUnidad extends StatelessWidget {
       ),
       acciones: [
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${u.nombre}',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
-        if (onEliminar != null)
-          AppIconoAccion(
-            icono: Icons.delete_outline,
-            tooltip: 'Eliminar',
-            color: Colores.advertencia,
-            onPressed: onEliminar,
-          ),
+        AppBotonFila(
+          icono: Icons.delete,
+          etiqueta: 'Eliminar ${u.nombre}',
+          tono: TonoAccion.peligro,
+          onPressed: onEliminar,
+          motivo: u.delSistema
+              ? 'Es una unidad del sistema'
+              : 'Solo se puede eliminar si ningún producto la usa',
+        ),
       ],
     );
   }

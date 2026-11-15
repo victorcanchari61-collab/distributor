@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -14,7 +15,6 @@ import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/config_modelos.dart';
 import '../estado/config_controlador.dart';
@@ -210,20 +210,18 @@ class _TarjetaUsuario extends StatelessWidget {
         ],
       ),
       acciones: [
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onEstado != null)
-          AppIconoAccion(
-            icono: usuario.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: usuario.activo ? 'Desactivar' : 'Activar',
-            color: usuario.activo ? Colores.advertencia : Colores.exito,
-            onPressed: onEstado,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
+        ),
+        AppBotonFila(
+          icono: usuario.activo ? Icons.block : Icons.check_circle,
+          etiqueta: usuario.activo ? 'Desactivar' : 'Activar',
+          tono: usuario.activo ? TonoAccion.aviso : TonoAccion.exito,
+          onPressed: onEstado,
+        ),
       ],
     );
   }

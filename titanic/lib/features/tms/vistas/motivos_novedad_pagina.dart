@@ -9,14 +9,13 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pestanas.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/novedad.dart';
 import '../estado/novedades_controlador.dart';
@@ -208,19 +207,19 @@ class MotivosNovedadPagina extends ConsumerWidget {
           ),
         ],
         acciones: [
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar',
+            tono: TonoAccion.editar,
             onPressed: permitir(
               puedeEditar,
               () => abrirHojaResultado(context, editando: r),
             ),
           ),
-          AppIconoAccion(
-            icono: r.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: r.activo ? 'Desactivar' : 'Activar',
-            color: r.activo ? Colores.advertencia : Colores.exito,
+          AppBotonFila(
+            icono: r.activo ? Icons.block : Icons.check_circle,
+            etiqueta: r.activo ? 'Desactivar' : 'Activar',
+            tono: r.activo ? TonoAccion.aviso : TonoAccion.exito,
             onPressed: permitir(
               puedeEditar,
               () => _cambiarEstadoResultado(context, ref, r),
@@ -387,30 +386,24 @@ class _TarjetaMotivo extends StatelessWidget {
       ],
       onTap: onVer,
       acciones: [
-        IconButton(
-          onPressed: onVer,
-          tooltip: 'Ver detalle',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(
-            Icons.visibility_outlined,
-            size: 18,
-            color: Colores.tintaSuave,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
         ),
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onEstado != null)
-          AppIconoAccion(
-            icono: motivo.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: motivo.activo ? 'Desactivar' : 'Activar',
-            color: motivo.activo ? Colores.advertencia : Colores.exito,
-            onPressed: onEstado,
-          ),
+        AppBotonFila(
+          icono: motivo.activo ? Icons.block : Icons.check_circle,
+          etiqueta: motivo.activo ? 'Desactivar' : 'Activar',
+          tono: motivo.activo ? TonoAccion.aviso : TonoAccion.exito,
+          onPressed: onEstado,
+        ),
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver detalle',
+          tono: TonoAccion.ver,
+          onPressed: onVer,
+        ),
       ],
     );
   }

@@ -10,12 +10,12 @@ import '../../core/tema/dimensiones.dart';
 import 'app_alerta.dart';
 import 'app_aviso.dart';
 import 'app_boton.dart';
+import 'app_boton_fila.dart';
 import 'app_campo.dart';
 import 'app_confirmacion.dart';
 import 'app_etiqueta.dart';
 import 'app_hoja.dart';
 import 'app_lista_pagina.dart';
-import 'app_sin_permiso.dart';
 import 'app_tarjeta_dato.dart';
 import 'app_tarjeta_registro.dart';
 
@@ -254,26 +254,29 @@ class _AppCatalogoSimpleState extends State<AppCatalogoSimple> {
           CampoDetalle(widget.usosEtiqueta, '${f.usos}'),
         ],
         acciones: [
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: acento,
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${f.nombre}',
+            tono: TonoAccion.editar,
             onPressed: permitir(widget.puedeEditar, () => _abrirHoja(f)),
           ),
-          AppIconoAccion(
-            icono: f.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: f.activo ? 'Desactivar' : 'Activar',
-            color: Colores.advertencia,
+          AppBotonFila(
+            icono: f.activo ? Icons.block : Icons.check_circle,
+            etiqueta: '${f.activo ? 'Desactivar' : 'Activar'} ${f.nombre}',
+            tono: f.activo ? TonoAccion.aviso : TonoAccion.exito,
             onPressed: permitir(widget.puedeEditar, () => _cambiarEstado(f)),
           ),
           // Solo sin usos: lo que ya se usa se desactiva, no se borra. Eso es
-          // del registro, no del permiso, así que ahí sigue oculto.
-          if (widget.onEliminar != null && f.usos == 0)
-            AppIconoAccion(
-              icono: Icons.delete_outline,
-              tooltip: 'Eliminar',
-              color: Colores.advertencia,
-              onPressed: permitir(widget.puedeEliminar, () => _eliminar(f)),
+          // del registro, no del permiso: se ve en gris con el motivo.
+          if (widget.onEliminar != null)
+            AppBotonFila(
+              icono: Icons.delete,
+              etiqueta: 'Eliminar ${f.nombre}',
+              tono: TonoAccion.peligro,
+              onPressed: f.usos == 0 || !widget.puedeEliminar
+                  ? permitir(widget.puedeEliminar, () => _eliminar(f))
+                  : null,
+              motivo: 'En uso: desactívalo en vez de eliminarlo',
             ),
         ],
       ),

@@ -9,6 +9,7 @@ import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_sin_permiso.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -17,7 +18,6 @@ import '../../../core/navegacion/menu.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../core/red/excepciones.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../datos/proveedor.dart';
 import '../estado/maestros_controlador.dart';
@@ -364,17 +364,18 @@ class _TarjetaProveedor extends StatelessWidget {
       onTap: () => _abrirDetalle(context),
       acciones: [
         if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.edit,
+            etiqueta: 'Editar ${proveedor.nombre}',
+            tono: TonoAccion.editar,
             onPressed: onEditar,
           ),
         if (onEstado != null)
-          AppIconoAccion(
-            icono: proveedor.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: proveedor.activo ? 'Desactivar' : 'Activar',
-            color: proveedor.activo ? Colores.advertencia : Colores.exito,
+          AppBotonFila(
+            icono: proveedor.activo ? Icons.block : Icons.check_circle,
+            etiqueta:
+                '${proveedor.activo ? 'Desactivar' : 'Activar'} ${proveedor.nombre}',
+            tono: proveedor.activo ? TonoAccion.aviso : TonoAccion.exito,
             onPressed: onEstado,
           ),
       ],

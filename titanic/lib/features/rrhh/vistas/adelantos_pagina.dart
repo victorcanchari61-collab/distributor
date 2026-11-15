@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_pdf.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/fechas.dart';
@@ -14,7 +15,6 @@ import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -224,8 +224,9 @@ class AdelantosPagina extends ConsumerWidget {
                 () => _hoja(context, (_) => _HojaPlan(adelanto: a)),
               )
             : null,
-        // Solo sin descuentos: lo descontado ya se le pagó de menos.
-        onAnular: a.estado != EstadoAdelanto.anulado && a.descontado == 0
+        // Solo sin descuentos: lo descontado ya se le pagó de menos. Con
+        // descuentos el botón queda en gris (ver la tarjeta).
+        onAnular: a.descontado == 0
             ? permitir(puedeAnular, () => _anular(context, ref, a))
             : null,
       ),
@@ -300,30 +301,29 @@ class _TarjetaAdelanto extends StatelessWidget {
         CampoDetalle('Fecha', fechaCorta(a.fecha)),
         CampoDetalle('Salió de', a.cuentaFinanciera),
       ],
+      // Como en el web: el plan solo sale pendiente y anular no sale ya
+      // anulado; con algo descontado, anular queda en gris con su motivo.
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver',
+          tono: TonoAccion.ver,
           onPressed: onVer,
-          tooltip: 'Ver',
-          visualDensity: VisualDensity.compact,
-          icon: Icon(
-            Icons.visibility_outlined,
-            size: 18,
-            color: Acento.de(context),
-          ),
         ),
         if (onPlan != null)
-          AppIconoAccion(
-            icono: Icons.event_repeat_outlined,
-            tooltip: 'Cómo se descuenta',
-            color: Acento.de(context),
+          AppBotonFila(
+            icono: Icons.calendar_month,
+            etiqueta: 'Cómo se descuenta',
+            tono: TonoAccion.editar,
             onPressed: onPlan,
           ),
-        if (onAnular != null)
-          AppIconoAccion(
+        if (a.estado != EstadoAdelanto.anulado)
+          AppBotonFila(
             icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.advertencia,
+            etiqueta: 'Anular',
+            tono: TonoAccion.peligro,
             onPressed: onAnular,
+            motivo: 'Ya se le descontó algo en planilla',
           ),
       ],
     );

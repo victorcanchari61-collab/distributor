@@ -239,6 +239,7 @@ class CierreRegistrado {
     this.observacion,
     this.estadoDescuento,
     this.saldoDescuento,
+    this.descontadoEnPlanilla = 0,
     this.billetes = 0,
     this.monedas = 0,
     this.digital = 0,
@@ -275,6 +276,10 @@ class CierreRegistrado {
   final String? estadoDescuento;
   final double? saldoDescuento;
 
+  /// Lo del faltante que ya se descontó en una planilla pagada. Con algo
+  /// descontado el cierre ya no se anula (igual que en el web).
+  final double descontadoEnPlanilla;
+
   String get resultado => diferencia < 0
       ? ResultadoCierre.faltante
       : diferencia > 0
@@ -300,6 +305,7 @@ class CierreRegistrado {
       sinEmpleado: json['sinEmpleado'] as bool? ?? false,
       estadoDescuento: descuento?['estado'] as String?,
       saldoDescuento: descuento == null ? null : _monto(descuento['saldo']),
+      descontadoEnPlanilla: _monto(descuento?['montoAplicado']),
       billetes: _monto(json['billetes']),
       monedas: _monto(json['monedas']),
       digital: _monto(json['digital']),

@@ -3,18 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../compartido/formato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/sin_permiso.dart';
 import '../../../core/permisos/permisos.dart';
-import '../../../core/tema/acento.dart';
 import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../crm/datos/crm.dart' show EstadoCaida;
@@ -393,24 +392,24 @@ class _TarjetaVisita extends StatelessWidget {
       acciones: [
         // Llamar antes de ir es lo que evita ir en balde: el puesto cerrado,
         // el dueño que no está, el pedido que ya hizo por otro lado.
-        if (visita.telefono != null && visita.telefono!.trim().isNotEmpty)
-          IconButton(
-            onPressed: () => _copiarTelefono(context),
-            tooltip: 'Teléfono',
-            visualDensity: VisualDensity.compact,
-            icon: Icon(
-              Icons.phone_outlined,
-              size: 18,
-              color: Acento.de(context),
-            ),
-          ),
-        if (onTomarPedido != null)
-          AppIconoAccion(
-            icono: Icons.add_shopping_cart_outlined,
-            tooltip: 'Tomar pedido',
-            color: Acento.de(context),
-            onPressed: onTomarPedido,
-          ),
+        // Lo que no aplica queda en gris con su motivo, como en el web.
+        AppBotonFila(
+          icono: Icons.phone,
+          etiqueta: 'Teléfono',
+          tono: TonoAccion.neutral,
+          onPressed:
+              visita.telefono != null && visita.telefono!.trim().isNotEmpty
+              ? () => _copiarTelefono(context)
+              : null,
+          motivo: 'No tiene teléfono registrado',
+        ),
+        AppBotonFila(
+          icono: Icons.add_shopping_cart,
+          etiqueta: 'Tomar pedido',
+          tono: TonoAccion.exito,
+          onPressed: onTomarPedido,
+          motivo: 'Ya tiene pedido',
+        ),
       ],
     );
   }

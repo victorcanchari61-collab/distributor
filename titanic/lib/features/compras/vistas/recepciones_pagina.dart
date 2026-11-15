@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/exportar_csv.dart';
 import '../../../compartido/formato.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -12,7 +13,6 @@ import '../../../compartido/estado/filtro_documento.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_pdf.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -279,39 +279,49 @@ class _TarjetaRecepcion extends StatelessWidget {
         tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
       ),
       campos: _campos,
-      onTap: () => mostrarDetalle(
-        context,
-        icono: Icons.move_to_inbox_outlined,
-        color: color,
-        titulo: doc.numero,
-        subtitulo: doc.almacen,
-        estado: AppEtiqueta(
-          doc.anulado ? 'Anulada' : 'Confirmada',
-          tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
-        ),
-        campos: _campos,
-        contenidoExtra: _lineas,
-      ),
+      onTap: () => _abrirDetalle(context),
       acciones: [
-        IconButton(
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver ${doc.numero}',
+          tono: TonoAccion.ver,
+          onPressed: () => _abrirDetalle(context),
+        ),
+        AppBotonFila(
+          icono: Icons.picture_as_pdf,
+          etiqueta: 'PDF de ${doc.numero}',
+          tono: TonoAccion.documento,
           onPressed: () => mostrarOpcionesPdf(
             context,
             documento: DocumentoPdf.recepcion,
             id: doc.id,
             numero: doc.numero,
           ),
-          tooltip: 'PDF',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
         ),
-        if (onAnular != null)
-          AppIconoAccion(
-            icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.peligro,
-            onPressed: onAnular,
-          ),
+        AppBotonFila(
+          icono: Icons.undo,
+          etiqueta: 'Anular ${doc.numero}',
+          tono: TonoAccion.peligro,
+          onPressed: onAnular,
+          motivo: 'Ya está anulada',
+        ),
       ],
+    );
+  }
+
+  Future<void> _abrirDetalle(BuildContext context) {
+    return mostrarDetalle(
+      context,
+      icono: Icons.move_to_inbox_outlined,
+      color: color,
+      titulo: doc.numero,
+      subtitulo: doc.almacen,
+      estado: AppEtiqueta(
+        doc.anulado ? 'Anulada' : 'Confirmada',
+        tono: doc.anulado ? EtiquetaTono.peligro : EtiquetaTono.exito,
+      ),
+      campos: _campos,
+      contenidoExtra: _lineas,
     );
   }
 }

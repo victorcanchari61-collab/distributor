@@ -302,7 +302,7 @@ void main() {
     final api = await _montarClientes(tester);
 
     // El icono de desactivar de la primera tarjeta.
-    await tester.tap(find.byTooltip('Desactivar').first);
+    await tester.tap(find.byTooltip('Desactivar ANA LEANDRO').first);
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Desactivar ANA LEANDRO'), findsOneWidget);
@@ -313,7 +313,7 @@ void main() {
     // Se cancelo: el API no se toco.
     expect(api.cambiados, isEmpty);
 
-    await tester.tap(find.byTooltip('Desactivar').first);
+    await tester.tap(find.byTooltip('Desactivar ANA LEANDRO').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Desactivar'));
     await tester.pumpAndSettle();

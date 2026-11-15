@@ -8,6 +8,7 @@ import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 import '../../../compartido/widgets/app_boton.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_confirmacion.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
@@ -15,7 +16,6 @@ import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
 import '../../../compartido/widgets/app_selector.dart';
 import '../../../compartido/widgets/app_selector_rango.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
 import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
@@ -347,10 +347,10 @@ class _TarjetaMovimiento extends StatelessWidget {
       ],
       acciones: [
         if (onAnular != null)
-          AppIconoAccion(
+          AppBotonFila(
             icono: Icons.block,
-            tooltip: 'Anular',
-            color: Colores.advertencia,
+            etiqueta: 'Anular',
+            tono: TonoAccion.peligro,
             onPressed: onAnular,
           ),
       ],

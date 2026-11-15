@@ -11,7 +11,7 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_hoja.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
-import '../../../compartido/widgets/app_sin_permiso.dart';
+import '../../../compartido/widgets/app_boton_fila.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/permisos/sin_permiso.dart';
@@ -231,30 +231,24 @@ class _Tarjeta extends StatelessWidget {
       ],
       onTap: onVer,
       acciones: [
-        IconButton(
-          onPressed: onVer,
-          tooltip: 'Ver detalle',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(
-            Icons.visibility_outlined,
-            size: 18,
-            color: Colores.tintaSuave,
-          ),
+        AppBotonFila(
+          icono: Icons.edit,
+          etiqueta: 'Editar',
+          tono: TonoAccion.editar,
+          onPressed: onEditar,
         ),
-        if (onEditar != null)
-          AppIconoAccion(
-            icono: Icons.edit_outlined,
-            tooltip: 'Editar',
-            color: Acento.de(context),
-            onPressed: onEditar,
-          ),
-        if (onEstado != null)
-          AppIconoAccion(
-            icono: tipo.activo ? Icons.block : Icons.check_circle_outline,
-            tooltip: tipo.activo ? 'Desactivar' : 'Activar',
-            color: tipo.activo ? Colores.advertencia : Colores.exito,
-            onPressed: onEstado,
-          ),
+        AppBotonFila(
+          icono: tipo.activo ? Icons.block : Icons.check_circle,
+          etiqueta: tipo.activo ? 'Desactivar' : 'Activar',
+          tono: tipo.activo ? TonoAccion.aviso : TonoAccion.exito,
+          onPressed: onEstado,
+        ),
+        AppBotonFila(
+          icono: Icons.visibility,
+          etiqueta: 'Ver detalle',
+          tono: TonoAccion.ver,
+          onPressed: onVer,
+        ),
       ],
     );
   }
