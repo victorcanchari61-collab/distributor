@@ -284,13 +284,23 @@ export function PlanoLienzo({
         }
       : {}
 
-  /** Los bordes para estirar una parte y la esquina que la estira hacia los dos lados. */
-  const asas = (f: FiguraPlano, parte: number, moviendo: boolean): ReactNode =>
-    editable &&
-    !moviendo &&
-    !ampliando && (
+  /**
+   * Los bordes para estirar una parte y la esquina que la estira hacia los dos lados. En un lugar con partes, solo los
+   * del contorno: un lado pegado a otra parte del mismo lugar es una unión por dentro, y ahí no se marca nada.
+   */
+  const asas = (f: FiguraPlano, parte: number, moviendo: boolean, rects: RectPlano[]): ReactNode => {
+    if (!editable || moviendo || ampliando) return null
+    const r = rects[parte]
+    const otras = rects.filter((_, i) => i !== parte)
+    const pegado: Record<Exclude<Asa, 'mover' | 'se'>, boolean> = {
+      n: otras.some((o) => o.y + o.alto === r.y && o.x < r.x + r.ancho && r.x < o.x + o.ancho),
+      s: otras.some((o) => o.y === r.y + r.alto && o.x < r.x + r.ancho && r.x < o.x + o.ancho),
+      o: otras.some((o) => o.x + o.ancho === r.x && o.y < r.y + r.alto && r.y < o.y + o.alto),
+      e: otras.some((o) => o.x === r.x + r.ancho && o.y < r.y + r.alto && r.y < o.y + o.alto),
+    }
+    return (
       <>
-        {BORDES.map((b) => (
+        {BORDES.filter((b) => !pegado[b.asa]).map((b) => (
           <div
             key={b.asa}
             aria-label="Estirar"
@@ -301,15 +311,18 @@ export function PlanoLienzo({
             onPointerDown={(e) => empezar(e, f, b.asa, parte)}
           />
         ))}
-        <div
-          aria-label="Estirar hacia los dos lados"
-          // Siempre a la vista: dice que se puede agrandar sin tener que descubrirlo.
-          className="absolute right-0 bottom-0 z-10 size-[14px] cursor-nwse-resize touch-none"
-          style={{ backgroundImage: 'linear-gradient(135deg,transparent 50%,rgb(var(--sys-rgb)) 50%)' }}
-          onPointerDown={(e) => empezar(e, f, 'se', parte)}
-        />
+        {/* Siempre a la vista: dice que se puede agrandar. Si cae en una unión por dentro, no va. */}
+        {!pegado.e && !pegado.s && (
+          <div
+            aria-label="Estirar hacia los dos lados"
+            className="absolute right-0 bottom-0 z-10 size-[14px] cursor-nwse-resize touch-none"
+            style={{ backgroundImage: 'linear-gradient(135deg,transparent 50%,rgb(var(--sys-rgb)) 50%)' }}
+            onPointerDown={(e) => empezar(e, f, 'se', parte)}
+          />
+        )}
       </>
     )
+  }
 
   const etiqueta = (f: FiguraPlano, vertical: boolean) => (
     <div className={cn('pointer-events-none h-full overflow-hidden p-1 leading-tight', vertical && 'flex justify-center')}>
@@ -448,7 +461,7 @@ export function PlanoLienzo({
                     {i === 0 && etiqueta(f, false)}
                     {i === 0 && insignia(f)}
                     {/* Sin botón de girar: un lugar con partes no se gira (primero se le quitan). */}
-                    {asas(f, i, moviendo)}
+                    {asas(f, i, moviendo, rects)}
                   </div>
                 ))}
               </div>
@@ -504,7 +517,7 @@ export function PlanoLienzo({
             >
               {etiqueta(f, vertical)}
               {insignia(f)}
-              {asas(f, 0, moviendo)}
+              {asas(f, 0, moviendo, [principal])}
               {editable && elegida && onGirar && !moviendo && !ampliando && botonGirar(f)}
             </div>
           )
