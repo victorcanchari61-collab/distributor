@@ -998,6 +998,9 @@ public class AppDbContext : DbContext
             // Al borrar un piso se van con él los pasillos y escaleras de su plano.
             entity.HasOne(e => e.Piso).WithMany()
                 .HasForeignKey(e => e.PisoId).OnDelete(DeleteBehavior.Cascade);
+            // Si se borra el piso de llegada, la escalera queda en el suyo (no se borra con él).
+            entity.HasOne(e => e.HastaPiso).WithMany()
+                .HasForeignKey(e => e.HastaPisoId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ProductoUbicacion>(entity =>

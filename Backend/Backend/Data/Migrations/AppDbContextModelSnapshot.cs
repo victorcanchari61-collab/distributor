@@ -1684,6 +1684,9 @@ namespace Backend.Data.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int?>("HastaPisoId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -1704,6 +1707,8 @@ namespace Backend.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("HastaPisoId");
 
                     b.HasIndex("PisoId");
 
@@ -5831,12 +5836,19 @@ namespace Backend.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Backend.Models.UbicacionAlmacen", "HastaPiso")
+                        .WithMany()
+                        .HasForeignKey("HastaPisoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Backend.Models.UbicacionAlmacen", "Piso")
                         .WithMany()
                         .HasForeignKey("PisoId")
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Almacen");
+
+                    b.Navigation("HastaPiso");
 
                     b.Navigation("Piso");
                 });

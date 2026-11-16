@@ -237,12 +237,22 @@ class ElementoPlano {
     required this.y,
     required this.ancho,
     required this.alto,
+    this.hastaPisoId,
+    this.pisos = const [],
   });
 
   final int id;
 
   /// El piso donde esta. Null en un almacen sin pisos.
   final int? pisoId;
+
+  /// Solo escaleras: el piso al que llega.
+  final int? hastaPisoId;
+
+  /// Los pisos donde se dibuja, de abajo hacia arriba. Una escalera ocupa el
+  /// mismo rectangulo en todos los pisos que cruza (de P1 a P3 tambien pasa
+  /// por P2). Un pasillo, solo su piso; en un almacen sin pisos, vacio.
+  final List<int> pisos;
 
   /// PASILLO o ESCALERA.
   final String tipo;
@@ -256,16 +266,28 @@ class ElementoPlano {
 
   bool get esEscalera => tipo == 'ESCALERA';
 
-  factory ElementoPlano.desdeJson(Map<String, dynamic> json) => ElementoPlano(
-    id: json['id'] as int,
-    pisoId: (json['pisoId'] as num?)?.toInt(),
-    tipo: json['tipo'] as String? ?? 'PASILLO',
-    nombre: json['nombre'] as String? ?? '',
-    x: (json['x'] as num?)?.toInt() ?? 0,
-    y: (json['y'] as num?)?.toInt() ?? 0,
-    ancho: (json['ancho'] as num?)?.toInt() ?? 1,
-    alto: (json['alto'] as num?)?.toInt() ?? 1,
-  );
+  factory ElementoPlano.desdeJson(Map<String, dynamic> json) {
+    final pisoId = (json['pisoId'] as num?)?.toInt();
+    final pisos = json['pisos'];
+    return ElementoPlano(
+      id: json['id'] as int,
+      pisoId: pisoId,
+      hastaPisoId: (json['hastaPisoId'] as num?)?.toInt(),
+      // Sin la lista (un API anterior), solo su piso.
+      pisos: pisos is List
+          ? [
+              for (final p in pisos)
+                if (p is num) p.toInt(),
+            ]
+          : [?pisoId],
+      tipo: json['tipo'] as String? ?? 'PASILLO',
+      nombre: json['nombre'] as String? ?? '',
+      x: (json['x'] as num?)?.toInt() ?? 0,
+      y: (json['y'] as num?)?.toInt() ?? 0,
+      ancho: (json['ancho'] as num?)?.toInt() ?? 1,
+      alto: (json['alto'] as num?)?.toInt() ?? 1,
+    );
+  }
 }
 
 /// La cuadricula del plano de un almacen y lo que no son lugares (pasillos y

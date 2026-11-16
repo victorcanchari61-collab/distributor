@@ -155,6 +155,13 @@ public class ElementoPlano
     public int? PisoId { get; set; }
     public UbicacionAlmacen? Piso { get; set; }
 
+    /// <summary>
+    /// Solo escaleras: el piso al que llega. Una escalera une pisos y ocupa el mismo lugar en todos los que cruza,
+    /// desde <see cref="PisoId"/> hasta este (de P1 a P3 pasa por P2). Nulo: una escalera de antes, sin otro piso.
+    /// </summary>
+    public int? HastaPisoId { get; set; }
+    public UbicacionAlmacen? HastaPiso { get; set; }
+
     public string Tipo { get; set; } = TipoElementoPlano.Pasillo;
     public string Nombre { get; set; } = string.Empty;
 

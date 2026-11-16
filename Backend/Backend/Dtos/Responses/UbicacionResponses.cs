@@ -43,6 +43,16 @@ public class ElementoPlanoResponse
 {
     public int Id { get; set; }
     public int? PisoId { get; set; }
+
+    /// <summary>Solo escaleras: el piso al que llega.</summary>
+    public int? HastaPisoId { get; set; }
+
+    /// <summary>
+    /// Los pisos donde se dibuja, de abajo hacia arriba: el suyo y, una escalera, todos los que cruza hasta el de
+    /// llegada. Vacío en un almacén sin pisos.
+    /// </summary>
+    public List<int> Pisos { get; set; } = [];
+
     public string Tipo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
     public int X { get; set; }

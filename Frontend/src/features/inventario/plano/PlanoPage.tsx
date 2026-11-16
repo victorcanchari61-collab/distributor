@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { ArrowLeftRight, ArrowUpDown, Copy, DoorOpen, Footprints, LayoutGrid, Maximize2, PaintBucket, Plus, RotateCw, Search, Trash2, Undo2, X } from 'lucide-react'
 import { FaXmark } from 'react-icons/fa6'
-import { Alert, Badge, BuscadorModal, Button, Input, PageHeader, RowAction, Tabs, useToast } from '../../../components/ui'
+import { Alert, Badge, BuscadorModal, Button, Desplegable, Input, PageHeader, RowAction, Tabs, useToast } from '../../../components/ui'
 import type { DataTableColumn } from '../../../components/ui'
 import { ApiError } from '../../../lib/apiClient'
 import { ACCION, usePermisos } from '../../../lib/permisos'
@@ -239,12 +239,20 @@ export function PlanoPage() {
 
   /** Un pasillo (a lo ancho o a lo alto) o una escalera, en el primer hueco libre. */
   const agregarElemento = (tipo: TipoElementoPlano, vertical = false) => {
+    // La escalera une pisos: sale de este y llega al de arriba (o al de abajo, si este es el último).
+    let hastaPisoId: number | null = null
+    if (tipo === 'ESCALERA') {
+      const i = pisos.findIndex((p) => p.id === pisoId)
+      if (i < 0 || pisos.length < 2) return toast.error('La escalera une pisos: crea otro piso para poder ponerla.')
+      hastaPisoId = (pisos[i + 1] ?? pisos[i - 1]).id
+    }
     const r =
       tipo === 'ESCALERA' ? hueco(3, 3, 2, 2) : vertical ? hueco(2, 8, 1, 2) : hueco(8, 2, 2, 1)
     if (!r) return toast.error('No hay espacio libre en este plano.')
     void conOcupado(async () => {
       const nuevo = await planoApi.crearElemento(almacenId, {
         pisoId,
+        hastaPisoId,
         tipo,
         nombre: tipo === 'PASILLO' ? 'Pasillo' : 'Escalera',
         ...r,
@@ -277,11 +285,28 @@ export function PlanoPage() {
         await recargar()
         setSeleccion(`L${nuevo.id}`)
       } else {
-        const nuevo = await planoApi.crearElemento(almacenId, { pisoId, tipo: f.tipo, nombre: f.nombre, ...r })
+        // La copia de una escalera une los mismos pisos que la original.
+        const original = plano?.elementos.find((e) => e.id === idDeClave(clave))
+        const nuevo = await planoApi.crearElemento(almacenId, {
+          pisoId: original?.pisoId ?? pisoId,
+          hastaPisoId: original?.hastaPisoId ?? null,
+          tipo: f.tipo,
+          nombre: f.nombre,
+          ...r,
+        })
         await recargar()
         setSeleccion(`E${nuevo.id}`)
       }
     }, 'No pudimos duplicarlo.')
+  }
+
+  /** A qué piso llega la escalera: el servidor revisa que ese lugar esté libre en todos los pisos que pasa a cruzar. */
+  const cambiarLlegada = (el: ElementoPlano, hastaPisoId: number) => {
+    if (hastaPisoId === el.hastaPisoId) return
+    void conOcupado(async () => {
+      await planoApi.actualizarElemento(el.id, { ...el, hastaPisoId })
+      await recargar()
+    }, 'No pudimos cambiar a dónde llega la escalera.')
   }
 
   // ------------------------------------------------------------- Lugares con partes (forma de L)
@@ -560,6 +585,23 @@ export function PlanoPage() {
             onBlur={guardarNombre}
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
+          {elementoElegido.tipo === 'ESCALERA' && elementoElegido.pisoId !== null && pisos.length > 1 && (
+            <>
+              <p className="text-sm text-ink-muted">
+                Sale de <b className="text-ink">{pisos.find((p) => p.id === elementoElegido.pisoId)?.codigo}</b> y ocupa ese lugar
+                en cada piso que cruza.
+              </p>
+              <Desplegable
+                label="Llega a"
+                disabled={!puedeEditar || ocupado}
+                value={elementoElegido.hastaPisoId ?? 0}
+                onChange={(v) => cambiarLlegada(elementoElegido, Number(v))}
+                options={pisos
+                  .filter((p) => p.id !== elementoElegido.pisoId)
+                  .map((p) => ({ value: p.id, label: p.nombre ? `${p.codigo} · ${p.nombre}` : p.codigo }))}
+              />
+            </>
+          )}
           <p className="text-xs text-ink-soft">No guarda mercadería: ayuda a ubicarse en el plano.</p>
           {puedeEditar && (
             <div className="grid grid-cols-2 gap-2">

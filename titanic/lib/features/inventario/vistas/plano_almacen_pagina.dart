@@ -271,6 +271,9 @@ class _PlanoAlmacenPaginaState extends ConsumerState<PlanoAlmacenPagina> {
               filas: math.max(1, cuadricula.filas),
               lugares: dibujados,
               elementos: elementos,
+              destinos: {
+                for (final e in elementos) e.id: mapa.destino(e, piso),
+              },
               resaltados: resaltados,
               onTocar: (l) => _verLugar(context, almacenId, l, coincidencias),
               onAmpliado: (ampliado) =>
@@ -386,10 +389,35 @@ class _MapaAlmacen {
         u,
   ];
 
+  /// Los pasillos y escaleras de un plano: los suyos y las escaleras que lo
+  /// cruzan aunque arranquen en otro piso.
   List<ElementoPlano> elementos(int clave) => [
     for (final e in plano.elementos)
-      if (clave == _sinPiso ? e.pisoId == null : e.pisoId == clave) e,
+      if (clave == _sinPiso
+          ? e.pisoId == null && e.pisos.isEmpty
+          : e.pisoId == clave || e.pisos.contains(clave))
+        e,
   ];
+
+  /// A donde lleva una escalera desde el piso que se mira: "Sube a P2 · P3",
+  /// "Baja a P1" o, en un piso del medio, las dos cosas. Los pisos van en el
+  /// orden de [ElementoPlano.pisos] (de abajo hacia arriba); los de abajo, del
+  /// mas cercano al mas lejano. Vacio si no es escalera o no cruza ese piso.
+  String destino(ElementoPlano e, int clave) {
+    if (!e.esEscalera) return '';
+    final i = e.pisos.indexOf(clave);
+    if (i < 0) return '';
+    String codigos(Iterable<int> ids) => [
+      for (final id in ids)
+        if (porId[id] case final piso?) piso.codigo,
+    ].join(' · ');
+    final sube = codigos(e.pisos.skip(i + 1));
+    final baja = codigos(e.pisos.take(i).toList().reversed);
+    return [
+      if (sube.isNotEmpty) 'Sube a $sube',
+      if (baja.isNotEmpty) 'Baja a $baja',
+    ].join(' — ');
+  }
 
   /// Los lugares del plano que nadie dibujo todavia: se listan para que nada
   /// quede escondido.
@@ -679,6 +707,7 @@ class _Plano extends StatefulWidget {
     required this.filas,
     required this.lugares,
     required this.elementos,
+    this.destinos = const {},
     required this.resaltados,
     required this.onTocar,
     required this.onAmpliado,
@@ -688,6 +717,9 @@ class _Plano extends StatefulWidget {
   final int filas;
   final List<Ubicacion> lugares;
   final List<ElementoPlano> elementos;
+
+  /// Por id de escalera, a donde lleva desde este piso ("Sube a P2").
+  final Map<int, String> destinos;
 
   /// Los ids de los lugares que tienen lo que se busca.
   final Set<int> resaltados;
@@ -775,7 +807,10 @@ class _PlanoState extends State<_Plano> {
                             e.y,
                             e.ancho,
                             e.alto,
-                            _CajaElemento(elemento: e),
+                            _CajaElemento(
+                              elemento: e,
+                              destino: widget.destinos[e.id] ?? '',
+                            ),
                           ),
                         for (final l in widget.lugares)
                           if (l.planoPartes.isEmpty)
@@ -1153,9 +1188,12 @@ class _RotuloLugar extends StatelessWidget {
 
 /// Un pasillo o una escalera: se dibujan pero no guardan mercaderia.
 class _CajaElemento extends StatelessWidget {
-  const _CajaElemento({required this.elemento});
+  const _CajaElemento({required this.elemento, this.destino = ''});
 
   final ElementoPlano elemento;
+
+  /// Solo escaleras: a donde lleva desde el piso que se mira. Vacio, nada.
+  final String destino;
 
   @override
   Widget build(BuildContext context) {
@@ -1172,17 +1210,40 @@ class _CajaElemento extends StatelessWidget {
               padding: const EdgeInsets.all(2),
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  color: const Color(0xD9FFFFFF),
-                  child: Text(
-                    elemento.nombre,
-                    style: TextStyle(
-                      fontSize: letra,
-                      fontWeight: FontWeight.w600,
-                      color: Colores.tintaSuave,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      color: const Color(0xD9FFFFFF),
+                      child: Text(
+                        elemento.nombre,
+                        style: TextStyle(
+                          fontSize: letra,
+                          fontWeight: FontWeight.w600,
+                          color: Colores.tintaSuave,
+                        ),
+                      ),
                     ),
-                  ),
+                    if (destino.isNotEmpty) ...[
+                      SizedBox(height: letra * 0.2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: BoxDecoration(
+                          color: Acento.de(context),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        child: Text(
+                          destino,
+                          style: TextStyle(
+                            fontSize: letra * 0.85,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),

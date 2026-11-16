@@ -238,6 +238,100 @@ void main() {
     },
   );
 
+  test('el elemento lee los pisos que cruza, y sin ellos queda en el suyo', () {
+    final escalera = ElementoPlano.desdeJson({
+      'id': 1,
+      'pisoId': 10,
+      'hastaPisoId': 30.0,
+      'tipo': 'ESCALERA',
+      'pisos': [10, 20.0, 30],
+    });
+    expect(escalera.hastaPisoId, 30);
+    expect(escalera.pisos, [10, 20, 30]);
+
+    final pasillo = ElementoPlano.desdeJson({'id': 2, 'pisoId': 10});
+    expect(pasillo.hastaPisoId, isNull);
+    expect(pasillo.pisos, [10]);
+
+    final nulo = ElementoPlano.desdeJson({
+      'id': 3,
+      'pisoId': 10,
+      'hastaPisoId': null,
+      'pisos': null,
+    });
+    expect(nulo.pisos, [10]);
+
+    expect(ElementoPlano.desdeJson({'id': 4}).pisos, isEmpty);
+    expect(ElementoPlano.desdeJson({'id': 5, 'pisoId': null}).pisos, isEmpty);
+  });
+
+  testWidgets(
+    'una escalera de P1 a P3 se ve en los tres pisos con su destino',
+    (tester) async {
+      await _montar(
+        tester,
+        _ApiFalsa(
+          lugares: [
+            _lugar(10, 'P1', tipo: 'PISO'),
+            _lugar(11, '01', padreId: 10, ruta: 'P1-01', rect: [0, 0, 4, 4]),
+            _lugar(20, 'P2', tipo: 'PISO'),
+            _lugar(30, 'P3', tipo: 'PISO'),
+          ],
+          elementos: [
+            {
+              'id': 1,
+              'pisoId': 10,
+              'hastaPisoId': 30,
+              'pisos': [10, 20, 30],
+              'tipo': 'ESCALERA',
+              'nombre': 'Escalera',
+              'x': 16,
+              'y': 6,
+              'ancho': 8,
+              'alto': 8,
+            },
+            {
+              'id': 2,
+              'pisoId': 10,
+              'pisos': [10],
+              'tipo': 'PASILLO',
+              'nombre': 'Pasillo',
+              'x': 4,
+              'y': 0,
+              'ancho': 2,
+              'alto': 14,
+            },
+          ],
+        ),
+      );
+
+      // P1: arranca aqui y sube.
+      expect(find.text('Escalera'), findsOneWidget);
+      expect(find.text('Pasillo'), findsOneWidget);
+      expect(find.text('Sube a P2 · P3'), findsOneWidget);
+
+      // P2: la cruza; no es su piso, pero se dibuja igual.
+      await tester.tap(find.text('P2'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escalera'), findsOneWidget);
+      expect(find.text('Pasillo'), findsNothing);
+      expect(find.text('Sube a P3 — Baja a P1'), findsOneWidget);
+      expect(find.text('Este piso todavía no está dibujado'), findsNothing);
+
+      // P3: llega aqui; baja, del piso mas cercano al mas lejano.
+      await tester.tap(find.text('P3'));
+      await tester.pumpAndSettle();
+      expect(find.text('Escalera'), findsOneWidget);
+      expect(find.text('Baja a P2 · P1'), findsOneWidget);
+    },
+  );
+
+  testWidgets('un pasillo no lleva destino', (tester) async {
+    await _montar(tester, _conPisos());
+    expect(find.textContaining('Sube a'), findsNothing);
+    expect(find.textContaining('Baja a'), findsNothing);
+  });
+
   testWidgets('un lugar en L es una sola figura: tocar su parte lo abre', (
     tester,
   ) async {

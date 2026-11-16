@@ -5,8 +5,37 @@ import { planoApi, ubicacionApi } from '../inventarioApi'
 import type { PlanoResponse, UbicacionResponse } from '../inventarioApi'
 import type { FiguraPlano } from './PlanoLienzo'
 
-/** Los pisos del almacén: cada uno es un plano. */
-export const pisosDe = (lugares: UbicacionResponse[]) => lugares.filter((l) => l.tipo === 'PISO' && l.padreId === null)
+const numeroDePiso = (codigo: string) => {
+  const m = /^P(\d+)$/i.exec(codigo)
+  return m ? Number(m[1]) : Number.MAX_SAFE_INTEGER
+}
+
+/**
+ * Los pisos del almacén, cada uno es un plano, de abajo hacia arriba: por el número de su código (P2 antes que P10),
+ * el mismo orden que usa el servidor para saber qué pisos cruza una escalera.
+ */
+export const pisosDe = (lugares: UbicacionResponse[]) =>
+  lugares
+    .filter((l) => l.tipo === 'PISO' && l.padreId === null)
+    .sort((a, b) => numeroDePiso(a.codigo) - numeroDePiso(b.codigo) || a.id - b.id)
+
+/**
+ * Hacia dónde lleva una escalera vista desde un piso: "Sube a P2 · P3", "Baja a P1", o las dos cosas en un piso del
+ * medio. Vacío si la escalera no cruza a otro piso.
+ */
+export function rumboEscalera(pisos: number[], desde: number | null, lugares: UbicacionResponse[], corto = false): string {
+  const i = desde === null ? -1 : pisos.indexOf(desde)
+  if (i < 0 || pisos.length < 2) return ''
+  const codigo = (id: number) => lugares.find((l) => l.id === id)?.codigo ?? '?'
+  const arriba = pisos.slice(i + 1).map(codigo)
+  const abajo = pisos.slice(0, i).reverse().map(codigo)
+  // Corto, para la etiqueta sobre la escalera (que suele ser angosta): "↑ P3 ↓ P1".
+  if (corto)
+    return [arriba.length ? `↑ ${arriba.join(' · ')}` : '', abajo.length ? `↓ ${abajo.join(' · ')}` : ''].filter(Boolean).join(' ')
+  return [arriba.length ? `Sube a ${arriba.join(' · ')}` : '', abajo.length ? `Baja a ${abajo.join(' · ')}` : '']
+    .filter(Boolean)
+    .join(' — ')
+}
 
 /**
  * Lo que va dibujado en el plano de un piso (o en el único plano, si el almacén no usa pisos y `pisoId` es null):
@@ -28,9 +57,20 @@ export function figurasDe(lugares: UbicacionResponse[], plano: PlanoResponse | n
       alto: l.planoAlto ?? 2,
       partes: l.planoPartes ?? [],
     }))
+  // Lo de este piso y las escaleras que lo cruzan, aunque se hayan puesto desde otro piso.
   const deElementos: FiguraPlano[] = (plano?.elementos ?? [])
-    .filter((e) => e.pisoId === pisoId)
-    .map((e) => ({ clave: `E${e.id}`, tipo: e.tipo, nombre: e.nombre, x: e.x, y: e.y, ancho: e.ancho, alto: e.alto }))
+    .filter((e) => e.pisoId === pisoId || (pisoId !== null && e.pisos.includes(pisoId)))
+    .map((e) => ({
+      clave: `E${e.id}`,
+      tipo: e.tipo,
+      nombre: e.nombre,
+      detalle: e.tipo === 'ESCALERA' ? rumboEscalera(e.pisos, pisoId, lugares, true) || undefined : undefined,
+      detalleCompleto: e.tipo === 'ESCALERA' ? rumboEscalera(e.pisos, pisoId, lugares) || undefined : undefined,
+      x: e.x,
+      y: e.y,
+      ancho: e.ancho,
+      alto: e.alto,
+    }))
   // Los pasillos van debajo: un lugar elegido no queda tapado por el pasillo de al lado.
   return [...deElementos, ...deLugares]
 }

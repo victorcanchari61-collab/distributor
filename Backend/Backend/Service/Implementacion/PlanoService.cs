@@ -15,6 +15,9 @@ namespace Backend.Service.Implementacion;
 ///
 /// Cada piso es un plano. Un almacén sin pisos tiene uno solo, con sus lugares sueltos. En un mismo plano nada se
 /// encima: dos cosas no ocupan la misma celda, igual que en el almacén.
+///
+/// La escalera une pisos: va de su piso al de llegada y ocupa el mismo lugar en todos los que cruza (de P1 a P3 pasa
+/// por P2). Se dibuja en cada uno, se revisa que esté libre en cada uno y se mueve en todos a la vez.
 /// </summary>
 public class PlanoService : IPlanoService
 {
@@ -43,20 +46,10 @@ public class PlanoService : IPlanoService
         if (!await _context.Almacenes.AnyAsync(a => a.Id == almacenId))
             throw new NotFoundException("Almacén no encontrado");
 
+        var orden = await PisosEnOrdenAsync(almacenId);
         var elementos = await _context.ElementosPlano.AsNoTracking()
             .Where(e => e.AlmacenId == almacenId)
             .OrderBy(e => e.Id)
-            .Select(e => new ElementoPlanoResponse
-            {
-                Id = e.Id,
-                PisoId = e.PisoId,
-                Tipo = e.Tipo,
-                Nombre = e.Nombre,
-                X = e.X,
-                Y = e.Y,
-                Ancho = e.Ancho,
-                Alto = e.Alto,
-            })
             .ToListAsync();
 
         return new PlanoResponse
@@ -64,7 +57,7 @@ public class PlanoService : IPlanoService
             AlmacenId = almacenId,
             Columnas = Plano.Columnas,
             Filas = Plano.Filas,
-            Elementos = elementos,
+            Elementos = elementos.Select(e => Respuesta(e, orden)).ToList(),
         };
     }
 
@@ -91,7 +84,7 @@ public class PlanoService : IPlanoService
             if (!Plano.Conectadas(todas))
                 throw new BadRequestException("Cada parte tiene que tocar al resto del lugar, por un lado.");
 
-            await ExigirLibreAsync(lugar.AlmacenId, lugar.PadreId, todas, lugarId: lugar.Id, elementoId: null);
+            await ExigirLibreAsync(lugar.AlmacenId, [lugar.PadreId], todas, lugarId: lugar.Id, elementoId: null);
             (lugar.PlanoX, lugar.PlanoY, lugar.PlanoAncho, lugar.PlanoAlto) = (x, y, ancho, alto);
             lugar.PlanoPartes = Plano.EscribirPartes(partes);
         }
@@ -113,25 +106,29 @@ public class PlanoService : IPlanoService
         if (!await _context.Almacenes.AnyAsync(a => a.Id == almacenId))
             throw new NotFoundException("Almacén no encontrado");
 
+        var orden = await PisosEnOrdenAsync(almacenId);
         if (request.PisoId is int pisoId)
         {
-            var piso = await _context.UbicacionesAlmacen.AsNoTracking().FirstOrDefaultAsync(u => u.Id == pisoId)
-                ?? throw new BadRequestException("Ese piso no existe");
-            if (piso.AlmacenId != almacenId || piso.Tipo != TipoUbicacion.Piso)
+            if (!orden.Contains(pisoId))
                 throw new BadRequestException("Ese piso no es de este almacén");
         }
-        else if (await _context.UbicacionesAlmacen.AnyAsync(
-                     u => u.AlmacenId == almacenId && u.PadreId == null && u.Tipo == TipoUbicacion.Piso))
+        else if (orden.Count > 0)
         {
             throw new BadRequestException("Este almacén usa pisos: elige en qué piso va.");
         }
 
-        await ExigirLibreAsync(almacenId, request.PisoId, [new RectPlano(request.X, request.Y, request.Ancho, request.Alto)], null, null);
+        int? hasta = request.Tipo == TipoElementoPlano.Escalera
+            ? ExigirLlegada(request.PisoId, request.HastaPisoId, orden)
+            : null;
+
+        var rect = new RectPlano(request.X, request.Y, request.Ancho, request.Alto);
+        await ExigirLibreAsync(almacenId, PisosDe(request.PisoId, hasta, orden), [rect], null, null);
 
         var elemento = new ElementoPlano
         {
             AlmacenId = almacenId,
             PisoId = request.PisoId,
+            HastaPisoId = hasta,
             Tipo = request.Tipo,
             Nombre = request.Nombre.Trim(),
             X = request.X,
@@ -143,7 +140,7 @@ public class PlanoService : IPlanoService
         await _context.SaveChangesAsync();
 
         await _notificador.AvisarAsync("ubicaciones", "plano", new { almacenId });
-        return Respuesta(elemento);
+        return Respuesta(elemento, orden);
     }
 
     public async Task<ElementoPlanoResponse> ActualizarElementoAsync(int id, ElementoPlanoRequest request)
@@ -153,14 +150,22 @@ public class PlanoService : IPlanoService
         var elemento = await _context.ElementosPlano.FirstOrDefaultAsync(e => e.Id == id)
             ?? throw new NotFoundException("Ese pasillo o escalera ya no existe");
 
-        await ExigirLibreAsync(elemento.AlmacenId, elemento.PisoId, [new RectPlano(request.X, request.Y, request.Ancho, request.Alto)], null, id);
+        var orden = await PisosEnOrdenAsync(elemento.AlmacenId);
+        // A dónde llega la escalera: se puede cambiar; sin dato, la de siempre.
+        var hasta = elemento.Tipo == TipoElementoPlano.Escalera && request.HastaPisoId is not null
+            ? ExigirLlegada(elemento.PisoId, request.HastaPisoId, orden)
+            : elemento.HastaPisoId;
+
+        var rect = new RectPlano(request.X, request.Y, request.Ancho, request.Alto);
+        await ExigirLibreAsync(elemento.AlmacenId, PisosDe(elemento.PisoId, hasta, orden), [rect], null, id);
 
         elemento.Nombre = request.Nombre.Trim();
+        elemento.HastaPisoId = hasta;
         (elemento.X, elemento.Y, elemento.Ancho, elemento.Alto) = (request.X, request.Y, request.Ancho, request.Alto);
         await _context.SaveChangesAsync();
 
         await _notificador.AvisarAsync("ubicaciones", "plano", new { almacenId = elemento.AlmacenId });
-        return Respuesta(elemento);
+        return Respuesta(elemento, orden);
     }
 
     public async Task EliminarElementoAsync(int id)
@@ -174,41 +179,103 @@ public class PlanoService : IPlanoService
         await _notificador.AvisarAsync("ubicaciones", "plano", new { almacenId = elemento.AlmacenId });
     }
 
+    // ------------------------------------------------------------- Pisos y escaleras
+
+    /// <summary>Los pisos del almacén de abajo hacia arriba: por el número de su código (P2 antes que P10).</summary>
+    private async Task<List<int>> PisosEnOrdenAsync(int almacenId) =>
+        (await _context.UbicacionesAlmacen.AsNoTracking()
+            .Where(u => u.AlmacenId == almacenId && u.PadreId == null && u.Tipo == TipoUbicacion.Piso)
+            .Select(u => new { u.Id, u.Codigo })
+            .ToListAsync())
+        .OrderBy(p => NumeroDePiso(p.Codigo))
+        .ThenBy(p => p.Id)
+        .Select(p => p.Id)
+        .ToList();
+
+    private static int NumeroDePiso(string codigo) =>
+        codigo.Length > 1 && char.ToUpperInvariant(codigo[0]) == 'P' && int.TryParse(codigo[1..], out var n) ? n : int.MaxValue;
+
     /// <summary>
-    /// Que lo que se dibuja (un rectángulo, o las partes de un lugar) quepa en la cuadrícula y no se encime con nada de
-    /// su plano: los lugares de ese piso (o los sueltos, si no hay pisos) con todas sus partes, y sus pasillos y
-    /// escaleras. Lo que se está moviendo no choca consigo mismo.
+    /// Los pisos que ocupa un elemento: el suyo; una escalera, todos desde su piso hasta el de llegada, de abajo hacia
+    /// arriba. En un almacén sin pisos, solo su plano (nulo).
     /// </summary>
-    private async Task ExigirLibreAsync(int almacenId, int? pisoId, IReadOnlyList<RectPlano> rects, int? lugarId, int? elementoId)
+    private static List<int?> PisosDe(int? pisoId, int? hastaPisoId, List<int> orden)
+    {
+        if (pisoId is not int a || hastaPisoId is not int b) return [pisoId];
+        var i = orden.IndexOf(a);
+        var j = orden.IndexOf(b);
+        if (i < 0 || j < 0) return [pisoId];
+        var (desde, hasta) = i <= j ? (i, j) : (j, i);
+        return orden.Skip(desde).Take(hasta - desde + 1).Select(p => (int?)p).ToList();
+    }
+
+    /// <summary>Una escalera une pisos: tiene que llegar a otro piso de este mismo almacén.</summary>
+    private static int ExigirLlegada(int? pisoId, int? hastaPisoId, List<int> orden)
+    {
+        if (pisoId is null || orden.Count < 2)
+            throw new BadRequestException("La escalera une pisos: crea al menos dos pisos para ponerla.");
+        if (hastaPisoId is not int hasta)
+            throw new BadRequestException("Elige a qué piso llega la escalera.");
+        if (!orden.Contains(hasta))
+            throw new BadRequestException("Ese piso de llegada no es de este almacén.");
+        if (hasta == pisoId)
+            throw new BadRequestException("La escalera tiene que llegar a otro piso.");
+        return hasta;
+    }
+
+    /// <summary>
+    /// Que lo que se dibuja (un rectángulo, o las partes de un lugar) quepa en la cuadrícula y no se encime con nada en
+    /// ninguno de los planos que ocupa: los lugares de cada piso con todas sus partes, sus pasillos y las escaleras que
+    /// lo cruzan (aunque hayan nacido en otro piso). Lo que se está moviendo no choca consigo mismo.
+    /// </summary>
+    private async Task ExigirLibreAsync(int almacenId, IReadOnlyList<int?> pisos, IReadOnlyList<RectPlano> rects, int? lugarId, int? elementoId)
     {
         if (rects.Any(r => !r.Cabe))
             throw new BadRequestException("No cabe en el plano: queda fuera de la cuadrícula.");
 
+        var orden = await PisosEnOrdenAsync(almacenId);
+        var codigos = await _context.UbicacionesAlmacen.AsNoTracking()
+            .Where(u => u.AlmacenId == almacenId && u.PadreId == null && u.Tipo == TipoUbicacion.Piso)
+            .ToDictionaryAsync(u => u.Id, u => u.Codigo);
+
         var lugares = (await _context.UbicacionesAlmacen.AsNoTracking()
-                .Where(u => u.AlmacenId == almacenId && u.PadreId == pisoId && u.Tipo != TipoUbicacion.Piso
-                            && u.PlanoX != null && u.Id != lugarId)
-                .Select(u => new { u.Codigo, u.Nombre, X = u.PlanoX!.Value, Y = u.PlanoY!.Value, Ancho = u.PlanoAncho!.Value, Alto = u.PlanoAlto!.Value, u.PlanoPartes })
+                .Where(u => u.AlmacenId == almacenId && u.Tipo != TipoUbicacion.Piso && u.PlanoX != null && u.Id != lugarId)
+                .Select(u => new { u.PadreId, u.Codigo, u.Nombre, X = u.PlanoX!.Value, Y = u.PlanoY!.Value, Ancho = u.PlanoAncho!.Value, Alto = u.PlanoAlto!.Value, u.PlanoPartes })
                 .ToListAsync())
+            .Where(u => pisos.Contains(u.PadreId))
             .Select(u => new
             {
+                Pisos = (IReadOnlyList<int?>)[u.PadreId],
                 Nombre = u.Nombre is null ? u.Codigo : $"{u.Codigo} · {u.Nombre}",
                 Rects = (List<RectPlano>)[new RectPlano(u.X, u.Y, u.Ancho, u.Alto), .. Plano.LeerPartes(u.PlanoPartes)],
             });
         var elementos = (await _context.ElementosPlano.AsNoTracking()
-                .Where(e => e.AlmacenId == almacenId && e.PisoId == pisoId && e.Id != elementoId)
-                .Select(e => new { e.Nombre, e.X, e.Y, e.Ancho, e.Alto })
+                .Where(e => e.AlmacenId == almacenId && e.Id != elementoId)
                 .ToListAsync())
-            .Select(e => new { e.Nombre, Rects = (List<RectPlano>)[new RectPlano(e.X, e.Y, e.Ancho, e.Alto)] });
+            .Select(e => new
+            {
+                Pisos = (IReadOnlyList<int?>)PisosDe(e.PisoId, e.HastaPisoId, orden),
+                e.Nombre,
+                Rects = (List<RectPlano>)[new RectPlano(e.X, e.Y, e.Ancho, e.Alto)],
+            });
 
-        var otro = lugares.Concat(elementos).FirstOrDefault(o => o.Rects.Any(a => rects.Any(r => r.Choca(a))));
-        if (otro is not null)
-            throw new ConflictException($"Se encima con {otro.Nombre}.");
+        foreach (var otro in lugares.Concat(elementos))
+        {
+            var comun = otro.Pisos.FirstOrDefault(p => pisos.Contains(p));
+            if (!otro.Pisos.Any(p => pisos.Contains(p))) continue;
+            if (!otro.Rects.Any(a => rects.Any(r => r.Choca(a)))) continue;
+            // Si el choque es en otro piso que el de siempre (una escalera que cruza), se dice en cuál.
+            var enPiso = pisos.Count > 1 && comun is int c && codigos.TryGetValue(c, out var codigo) ? $" en {codigo}" : "";
+            throw new ConflictException($"Se encima con {otro.Nombre}{enPiso}.");
+        }
     }
 
-    private static ElementoPlanoResponse Respuesta(ElementoPlano e) => new()
+    private static ElementoPlanoResponse Respuesta(ElementoPlano e, List<int> orden) => new()
     {
         Id = e.Id,
         PisoId = e.PisoId,
+        HastaPisoId = e.HastaPisoId,
+        Pisos = PisosDe(e.PisoId, e.HastaPisoId, orden).OfType<int>().ToList(),
         Tipo = e.Tipo,
         Nombre = e.Nombre,
         X = e.X,

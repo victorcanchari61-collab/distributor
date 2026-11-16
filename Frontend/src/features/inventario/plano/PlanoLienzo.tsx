@@ -20,6 +20,10 @@ export interface FiguraPlano extends RectPlano {
   inactivo?: boolean
   /** Partes extra pegadas al rectángulo principal: un lugar en forma de L que rodea la escalera. */
   partes?: RectPlano[]
+  /** Una línea más bajo el nombre: hacia dónde lleva una escalera desde este piso ("Sube a P2"). */
+  detalle?: string
+  /** El mismo rumbo dicho entero ("Sube a P3 — Baja a P1"): sale al pasar el mouse. */
+  detalleCompleto?: string
 }
 
 /** Tamaño mínimo de cada cosa, en celdas: un lugar de 1×1 no se lee. Las partes extra pueden ser de una celda. */
@@ -340,6 +344,15 @@ export function PlanoLienzo({
       >
         {f.nombre}
       </div>
+      {/* Hacia dónde lleva la escalera desde este piso: "Sube a P2", "Baja a P1". */}
+      {f.detalle && !vertical && (
+        <div
+          title={f.detalleCompleto}
+          className="pointer-events-auto mt-0.5 block w-fit max-w-full truncate rounded-sm bg-[rgb(var(--sys-rgb))] px-1.5 text-[10px] font-semibold text-white"
+        >
+          {f.detalle}
+        </div>
+      )}
     </div>
   )
 

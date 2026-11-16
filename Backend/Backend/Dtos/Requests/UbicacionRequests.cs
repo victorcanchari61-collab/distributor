@@ -63,6 +63,11 @@ public class ElementoPlanoRequest
     /// <summary>PASILLO o ESCALERA. Al cambiarlo de lugar no se usa: no cambia de tipo.</summary>
     public string Tipo { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Solo escaleras: el piso al que llega (obligatorio al crearla; al cambiarla, sin dato se queda el que tenía).
+    /// </summary>
+    public int? HastaPisoId { get; set; }
+
     public string Nombre { get; set; } = string.Empty;
     public int X { get; set; }
     public int Y { get; set; }

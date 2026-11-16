@@ -199,9 +199,16 @@ export interface ElementoPlano extends RectPlano {
   id: number
   /** El piso en cuyo plano está. Nulo: el almacén no usa pisos. */
   pisoId: number | null
+  /** Solo escaleras: el piso al que llega. La escalera une pisos y ocupa el mismo lugar en todos los que cruza. */
+  hastaPisoId: number | null
+  /** Los pisos donde se dibuja, de abajo hacia arriba (una escalera, todos los que cruza). Lo arma el servidor. */
+  pisos: number[]
   tipo: TipoElementoPlano
   nombre: string
 }
+
+/** Lo que se manda al crear o cambiar un pasillo o escalera. */
+export type ElementoPlanoRequest = Omit<ElementoPlano, 'id' | 'pisos'>
 
 export interface PlanoResponse {
   almacenId: number
@@ -221,9 +228,9 @@ export const planoApi = {
       `/ubicacion/${ubicacionId}/plano`,
       rect ? { ...rect, partes } : { x: null, y: null, ancho: null, alto: null },
     ),
-  crearElemento: (almacenId: number, body: Omit<ElementoPlano, 'id'>) =>
+  crearElemento: (almacenId: number, body: ElementoPlanoRequest) =>
     api.post<ElementoPlano>(`/almacen/${almacenId}/plano/elementos`, body),
-  actualizarElemento: (id: number, body: Omit<ElementoPlano, 'id'>) =>
+  actualizarElemento: (id: number, body: ElementoPlanoRequest) =>
     api.put<ElementoPlano>(`/plano/elementos/${id}`, body),
   eliminarElemento: (id: number) => api.del<void>(`/plano/elementos/${id}`),
 }
