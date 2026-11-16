@@ -132,6 +132,8 @@ class Ubicacion {
     this.planoAncho,
     this.planoAlto,
     this.planoPartes = const [],
+    this.planoHastaPisoId,
+    this.planoPisos = const [],
   });
 
   final int id;
@@ -171,6 +173,15 @@ class Ubicacion {
   /// No se pisan entre si y cada uno toca al resto del lugar por un lado.
   final List<RectPlano> planoPartes;
 
+  /// Doble altura: el piso de arriba hasta el que llega abierto (sin losa en
+  /// medio). Null: solo ocupa su piso.
+  final int? planoHastaPisoId;
+
+  /// Los pisos que ocupa, de abajo hacia arriba: el suyo y, con doble altura,
+  /// los de arriba hasta [planoHastaPisoId]. En esos de arriba su area es un
+  /// vacio donde no se puede poner nada.
+  final List<int> planoPisos;
+
   bool get esPiso => tipo == 'PISO';
 
   /// Tiene su rectangulo completo en el plano.
@@ -180,28 +191,40 @@ class Ubicacion {
       planoAncho != null &&
       planoAlto != null;
 
-  factory Ubicacion.desdeJson(Map<String, dynamic> json) => Ubicacion(
-    id: json['id'] as int,
-    almacenId: json['almacenId'] as int? ?? 0,
-    padreId: json['padreId'] as int?,
-    tipo: json['tipo'] as String? ?? '',
-    tipoEtiqueta: json['tipoEtiqueta'] as String? ?? '',
-    codigo: json['codigo'] as String? ?? '',
-    nombre: json['nombre'] as String?,
-    ruta: json['ruta'] as String? ?? '',
-    nivel: json['nivel'] as int? ?? 0,
-    activo: json['activo'] as bool? ?? true,
-    hijos: json['hijos'] as int? ?? 0,
-    productos: json['productos'] as int? ?? 0,
-    planoX: (json['planoX'] as num?)?.toInt(),
-    planoY: (json['planoY'] as num?)?.toInt(),
-    planoAncho: (json['planoAncho'] as num?)?.toInt(),
-    planoAlto: (json['planoAlto'] as num?)?.toInt(),
-    planoPartes: [
-      for (final p in (json['planoPartes'] as List? ?? const []))
-        if (p is Map) RectPlano.desdeJson(p.cast<String, dynamic>()),
-    ],
-  );
+  factory Ubicacion.desdeJson(Map<String, dynamic> json) {
+    final padreId = (json['padreId'] as num?)?.toInt();
+    final pisos = json['planoPisos'];
+    return Ubicacion(
+      id: json['id'] as int,
+      almacenId: json['almacenId'] as int? ?? 0,
+      padreId: padreId,
+      tipo: json['tipo'] as String? ?? '',
+      tipoEtiqueta: json['tipoEtiqueta'] as String? ?? '',
+      codigo: json['codigo'] as String? ?? '',
+      nombre: json['nombre'] as String?,
+      ruta: json['ruta'] as String? ?? '',
+      nivel: json['nivel'] as int? ?? 0,
+      activo: json['activo'] as bool? ?? true,
+      hijos: json['hijos'] as int? ?? 0,
+      productos: json['productos'] as int? ?? 0,
+      planoX: (json['planoX'] as num?)?.toInt(),
+      planoY: (json['planoY'] as num?)?.toInt(),
+      planoAncho: (json['planoAncho'] as num?)?.toInt(),
+      planoAlto: (json['planoAlto'] as num?)?.toInt(),
+      planoPartes: [
+        for (final p in (json['planoPartes'] as List? ?? const []))
+          if (p is Map) RectPlano.desdeJson(p.cast<String, dynamic>()),
+      ],
+      planoHastaPisoId: (json['planoHastaPisoId'] as num?)?.toInt(),
+      // Sin la lista (un API anterior), solo el piso de donde cuelga.
+      planoPisos: pisos is List
+          ? [
+              for (final p in pisos)
+                if (p is num) p.toInt(),
+            ]
+          : [?padreId],
+    );
+  }
 }
 
 /// Un rectangulo en celdas de la cuadricula del plano.
@@ -246,12 +269,14 @@ class ElementoPlano {
   /// El piso donde esta. Null en un almacen sin pisos.
   final int? pisoId;
 
-  /// Solo escaleras: el piso al que llega.
+  /// En una escalera, el piso al que llega; en un pasillo de doble altura, el
+  /// de arriba hasta el que llega abierto.
   final int? hastaPisoId;
 
   /// Los pisos donde se dibuja, de abajo hacia arriba. Una escalera ocupa el
   /// mismo rectangulo en todos los pisos que cruza (de P1 a P3 tambien pasa
-  /// por P2). Un pasillo, solo su piso; en un almacen sin pisos, vacio.
+  /// por P2). Un pasillo, su piso y, si es de doble altura, los de arriba
+  /// (ahi es un vacio, no un pasillo); en un almacen sin pisos, vacio.
   final List<int> pisos;
 
   /// PASILLO o ESCALERA.

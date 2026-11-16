@@ -984,6 +984,9 @@ public class AppDbContext : DbContext
                 .HasForeignKey(u => u.AlmacenId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(u => u.Padre).WithMany()
                 .HasForeignKey(u => u.PadreId).OnDelete(DeleteBehavior.Restrict);
+            // Si se borra el piso hasta donde llegaba la doble altura, el lugar vuelve a ocupar solo el suyo.
+            entity.HasOne(u => u.PlanoHastaPiso).WithMany()
+                .HasForeignKey(u => u.PlanoHastaPisoId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ElementoPlano>(entity =>

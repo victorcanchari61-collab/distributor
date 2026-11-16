@@ -5,11 +5,12 @@ import { cn } from '../../../components/ui'
 import type { RectPlano } from '../inventarioApi'
 import { bordeExterior, estaLibre, formanUnaFigura, MIME_PRODUCTO, rectsDe } from './geometria'
 
-export type TipoFigura = 'LUGAR' | 'PASILLO' | 'ESCALERA'
+/** VACIO: la doble altura de algo del piso de abajo; aquí no hay suelo y no se pone nada. */
+export type TipoFigura = 'LUGAR' | 'PASILLO' | 'ESCALERA' | 'VACIO'
 
-/** Lo que se dibuja en el plano: un lugar (guarda mercadería), un pasillo o una escalera. */
+/** Lo que se dibuja en el plano: un lugar (guarda mercadería), un pasillo, una escalera o un vacío. */
 export interface FiguraPlano extends RectPlano {
-  /** "L12" para el lugar 12, "E3" para el pasillo o escalera 3. */
+  /** "L12" para el lugar 12, "E3" para el pasillo o escalera 3, "VL12"/"VE3" para sus vacíos en pisos de arriba. */
   clave: string
   tipo: TipoFigura
   /** La ruta del lugar ("P1-01"); los pasillos y escaleras no tienen. */
@@ -20,26 +21,74 @@ export interface FiguraPlano extends RectPlano {
   inactivo?: boolean
   /** Partes extra pegadas al rectángulo principal: un lugar en forma de L que rodea la escalera. */
   partes?: RectPlano[]
-  /** Una línea más bajo el nombre: hacia dónde lleva una escalera desde este piso ("Sube a P2"). */
+  /** Una línea más bajo el nombre: hacia dónde lleva una escalera ("↑ P2"), de quién es un vacío. */
   detalle?: string
-  /** El mismo rumbo dicho entero ("Sube a P3 — Baja a P1"): sale al pasar el mouse. */
+  /** El mismo detalle dicho entero ("Sube a P3 — Baja a P1"): sale al pasar el mouse. */
   detalleCompleto?: string
+  /** Solo lugares: elige su color (el id del lugar), así cada lugar se distingue del de al lado. */
+  color?: number
 }
 
 /** Tamaño mínimo de cada cosa, en celdas: un lugar de 1×1 no se lee. Las partes extra pueden ser de una celda. */
-const MINIMO: Record<TipoFigura, [number, number]> = { LUGAR: [2, 2], PASILLO: [1, 1], ESCALERA: [2, 2] }
+const MINIMO: Record<TipoFigura, [number, number]> = { LUGAR: [2, 2], PASILLO: [1, 1], ESCALERA: [2, 2], VACIO: [1, 1] }
 
-/** Los rellenos con dibujo, en el color del módulo: el pasillo rayado, la escalera con sus peldaños. */
-const ESTILO: Record<TipoFigura, CSSProperties> = {
-  LUGAR: {},
+/**
+ * Los colores de los lugares: uno distinto para cada lugar (por su id), suaves de fondo y fuertes de borde, para que
+ * dos lugares pegados no se confundan. Sin amarillo: es el color de lo que se buscó.
+ */
+const PALETA = [
+  { fondo: '#dbeafe', borde: '#2563eb', texto: '#1e40af' }, // azul
+  { fondo: '#dcfce7', borde: '#16a34a', texto: '#166534' }, // verde
+  { fondo: '#ede9fe', borde: '#7c3aed', texto: '#5b21b6' }, // violeta
+  { fondo: '#fce7f3', borde: '#db2777', texto: '#9d174d' }, // rosa
+  { fondo: '#cffafe', borde: '#0891b2', texto: '#155e75' }, // cian
+  { fondo: '#ffedd5', borde: '#ea580c', texto: '#9a3412' }, // naranja
+  { fondo: '#ecfccb', borde: '#65a30d', texto: '#3f6212' }, // lima
+  { fondo: '#e0e7ff', borde: '#4f46e5', texto: '#3730a3' }, // índigo
+]
+const colorDeLugar = (f: FiguraPlano) => PALETA[Math.abs(f.color ?? 0) % PALETA.length]
+
+/** Cómo se pinta cada cosa que no es lugar: el pasillo gris rayado, la escalera con peldaños, el vacío oscuro. */
+const NO_LUGAR = {
   PASILLO: {
-    backgroundImage:
-      'repeating-linear-gradient(45deg,rgb(var(--sys-rgb) / 0.16) 0 7px,rgb(var(--sys-rgb) / 0.05) 7px 14px)',
+    fondo: '#f1f5f9',
+    patron: 'repeating-linear-gradient(45deg,#e2e8f0 0 7px,#f8fafc 7px 14px)',
+    borde: '#94a3b8',
+    texto: '#475569',
+    discontinuo: true,
+    grosor: 2,
   },
   ESCALERA: {
-    backgroundImage: 'repeating-linear-gradient(0deg,rgb(var(--sys-dark-rgb) / 0.55) 0 2px,#ffffff 2px 8px)',
+    fondo: '#ffffff',
+    patron: 'repeating-linear-gradient(0deg,#64748b 0 2px,#ffffff 2px 8px)',
+    borde: '#334155',
+    texto: '#ffffff',
+    discontinuo: false,
+    grosor: 3,
+  },
+  VACIO: {
+    fondo: 'rgba(15,23,42,0.14)',
+    patron: 'repeating-linear-gradient(135deg,rgba(15,23,42,0.28) 0 5px,rgba(15,23,42,0.07) 5px 11px)',
+    borde: '#475569',
+    texto: '#0f172a',
+    discontinuo: true,
+    grosor: 2,
   },
 }
+
+const AMARILLO = { fondo: '#fef08a', borde: '#ca8a04' }
+
+/** La leyenda: qué es cada color. */
+const LEYENDA: { nombre: string; muestra: CSSProperties }[] = [
+  {
+    nombre: 'Lugares (cada uno su color)',
+    muestra: { backgroundImage: `linear-gradient(90deg,${PALETA[0].fondo} 33%,${PALETA[1].fondo} 33% 66%,${PALETA[2].fondo} 66%)`, borderColor: '#334155' },
+  },
+  { nombre: 'Pasillo', muestra: { backgroundImage: NO_LUGAR.PASILLO.patron, borderColor: NO_LUGAR.PASILLO.borde, borderStyle: 'dashed' } },
+  { nombre: 'Escalera (une pisos)', muestra: { backgroundImage: NO_LUGAR.ESCALERA.patron, borderColor: NO_LUGAR.ESCALERA.borde } },
+  { nombre: 'Vacío (doble altura, sin suelo)', muestra: { backgroundImage: NO_LUGAR.VACIO.patron, borderColor: NO_LUGAR.VACIO.borde, borderStyle: 'dashed' } },
+  { nombre: 'Lo que buscaste', muestra: { backgroundColor: AMARILLO.fondo, borderColor: AMARILLO.borde } },
+]
 
 /**
  * Desde dónde se arrastra: el cuerpo mueve (la figura entera, con todas sus partes); un borde estira esa parte hacia
@@ -67,8 +116,10 @@ interface Props {
   resaltadas?: ReadonlySet<string>
   /** Se pueden mover y estirar arrastrando. Sin esto, el plano solo se mira y se toca para elegir. */
   editable?: boolean
-  /** Tocar un lugar lo elige; tocar un pasillo o escalera, o el fondo, no hace nada (para elegir dónde guardar). */
+  /** Tocar un lugar lo elige; tocar un pasillo, escalera, vacío o el fondo no hace nada (para elegir dónde guardar). */
   soloLugares?: boolean
+  /** Muestra debajo qué es cada color. */
+  leyenda?: boolean
   onSeleccionar?: (clave: string | null) => void
   /** Al soltar lo que se movió o estiró: el rectángulo principal y las partes extra. Quien lo usa guarda. */
   onCambiar?: (clave: string, rect: RectPlano, partes: RectPlano[]) => void
@@ -93,6 +144,7 @@ export function PlanoLienzo({
   resaltadas,
   editable = false,
   soloLugares = false,
+  leyenda = false,
   onSeleccionar,
   onCambiar,
   onGirar,
@@ -116,8 +168,9 @@ export function PlanoLienzo({
     if (!el) return
     const medir = () => {
       const ancho = el.clientWidth - 6
-      // Debajo quedan: el borde del plano (6), el relleno y borde del recuadro (13) y el margen de la página (24).
-      const libreAlto = window.innerHeight - (el.getBoundingClientRect().top + window.scrollY) - 46
+      // Debajo quedan: el borde del plano (6), el relleno y borde del recuadro (13), el margen de la página (24) y,
+      // si va, la leyenda (30).
+      const libreAlto = window.innerHeight - (el.getBoundingClientRect().top + window.scrollY) - 46 - (leyenda ? 30 : 0)
       const porAncho = ancho / columnas
       const porAlto = libreAlto > 200 ? libreAlto / filas : porAncho
       setCelda(Math.max(14, Math.floor(Math.min(porAncho, porAlto))))
@@ -131,7 +184,7 @@ export function PlanoLienzo({
       ro.disconnect()
       window.removeEventListener('resize', medir)
     }
-  }, [columnas, filas])
+  }, [columnas, filas, leyenda])
 
   // Si cambian las figuras (otro piso, se recargó, se guardó), lo que se arrastraba ya no vale.
   useEffect(() => setVivo(null), [figuras])
@@ -146,7 +199,8 @@ export function PlanoLienzo({
     e.stopPropagation()
     if (soloLugares && f.tipo !== 'LUGAR') return
     onSeleccionar?.(f.clave)
-    if (!editable) return
+    // Un vacío no se mueve desde aquí: se mueve lo de abajo, y el vacío lo sigue.
+    if (!editable || f.tipo === 'VACIO') return
     e.preventDefault()
 
     const x0 = e.clientX
@@ -259,7 +313,7 @@ export function PlanoLienzo({
     height: celda * filas,
     backgroundSize: `${celda}px ${celda}px`,
     backgroundImage:
-      'linear-gradient(rgb(var(--sys-rgb) / 0.10) 1px,transparent 1px),linear-gradient(90deg,rgb(var(--sys-rgb) / 0.10) 1px,transparent 1px)',
+      'linear-gradient(rgba(148,163,184,0.25) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,0.25) 1px,transparent 1px)',
   }
 
   const posicion = (r: RectPlano): CSSProperties => ({
@@ -268,6 +322,31 @@ export function PlanoLienzo({
     width: r.ancho * celda,
     height: r.alto * celda,
   })
+
+  /**
+   * Los colores de una figura según lo que es y cómo está: cada lugar el suyo; lo que se buscó, amarillo; donde se va
+   * a soltar un producto, punteado del color del módulo. Lo elegido conserva su color y gana un borde oscuro.
+   */
+  const pintura = (f: FiguraPlano, elegida: boolean, resaltada: boolean, encima: boolean) => {
+    const base =
+      f.tipo === 'LUGAR'
+        ? { ...colorDeLugar(f), patron: undefined as string | undefined, discontinuo: false, grosor: 3 }
+        : NO_LUGAR[f.tipo]
+    let fondo = base.fondo
+    let borde = base.borde
+    let discontinuo = base.discontinuo
+    if (resaltada) {
+      fondo = AMARILLO.fondo
+      borde = AMARILLO.borde
+    }
+    if (encima) {
+      fondo = 'rgb(var(--sys-rgb) / 0.25)'
+      borde = 'rgb(var(--sys-rgb))'
+      discontinuo = true
+    }
+    if (elegida) borde = '#0f172a'
+    return { fondo, borde, discontinuo, grosor: base.grosor, patron: resaltada || encima ? undefined : base.patron, texto: base.texto }
+  }
 
   /** Lo que hace de un rectángulo un lugar donde soltar productos. */
   const destinoProducto = (f: FiguraPlano) =>
@@ -292,8 +371,8 @@ export function PlanoLienzo({
    * Los bordes para estirar una parte y la esquina que la estira hacia los dos lados. En un lugar con partes, solo los
    * del contorno: un lado pegado a otra parte del mismo lugar es una unión por dentro, y ahí no se marca nada.
    */
-  const asas = (f: FiguraPlano, parte: number, moviendo: boolean, rects: RectPlano[]): ReactNode => {
-    if (!editable || moviendo || ampliando) return null
+  const asas = (f: FiguraPlano, parte: number, moviendo: boolean, rects: RectPlano[], color: string): ReactNode => {
+    if (!editable || moviendo || ampliando || f.tipo === 'VACIO') return null
     const r = rects[parte]
     const otras = rects.filter((_, i) => i !== parte)
     const pegado: Record<Exclude<Asa, 'mover' | 'se'>, boolean> = {
@@ -308,10 +387,8 @@ export function PlanoLienzo({
           <div
             key={b.asa}
             aria-label="Estirar"
-            className={cn(
-              'absolute z-10 touch-none rounded-full bg-[rgb(var(--sys-rgb))] opacity-0 group-hover/fig:opacity-60 hover:!opacity-100',
-              b.clase,
-            )}
+            className={cn('absolute z-10 touch-none rounded-full opacity-0 group-hover/fig:opacity-60 hover:!opacity-100', b.clase)}
+            style={{ backgroundColor: color }}
             onPointerDown={(e) => empezar(e, f, b.asa, parte)}
           />
         ))}
@@ -320,7 +397,7 @@ export function PlanoLienzo({
           <div
             aria-label="Estirar hacia los dos lados"
             className="absolute right-0 bottom-0 z-10 size-[14px] cursor-nwse-resize touch-none"
-            style={{ backgroundImage: 'linear-gradient(135deg,transparent 50%,rgb(var(--sys-rgb)) 50%)' }}
+            style={{ backgroundImage: `linear-gradient(135deg,transparent 50%,${color} 50%)` }}
             onPointerDown={(e) => empezar(e, f, 'se', parte)}
           />
         )}
@@ -328,27 +405,34 @@ export function PlanoLienzo({
     )
   }
 
-  const etiqueta = (f: FiguraPlano, vertical: boolean) => (
+  const etiqueta = (f: FiguraPlano, vertical: boolean, colorTexto: string) => (
     <div className={cn('pointer-events-none h-full overflow-hidden p-1 leading-tight', vertical && 'flex justify-center')}>
       {f.tipo === 'LUGAR' && f.codigo && (
-        <div className="text-[10px] font-bold tracking-wide text-[rgb(var(--sys-ink-rgb))]">{f.codigo}</div>
+        <div className="text-[10px] font-bold tracking-wide" style={{ color: colorTexto }}>
+          {f.codigo}
+        </div>
       )}
       <div
         className={cn(
           'truncate text-xs font-semibold',
-          f.tipo === 'LUGAR' ? 'text-ink' : f.tipo === 'PASILLO' ? 'text-[rgb(var(--sys-ink-rgb))]' : '',
+          f.tipo === 'LUGAR' && 'text-ink',
           // La escalera lleva su nombre en una etiqueta oscura sobre los peldaños, como un cartel.
-          f.tipo === 'ESCALERA' && 'inline-block max-w-full rounded-sm bg-slate-800 px-1.5 text-white',
+          f.tipo === 'ESCALERA' && 'inline-block max-w-full rounded-sm bg-slate-800 px-1.5',
+          f.tipo === 'VACIO' && 'inline-block max-w-full rounded-sm bg-white/80 px-1.5',
           vertical && 'max-h-full [writing-mode:vertical-rl]',
         )}
+        style={f.tipo === 'LUGAR' ? undefined : { color: colorTexto }}
       >
         {f.nombre}
       </div>
-      {/* Hacia dónde lleva la escalera desde este piso: "Sube a P2", "Baja a P1". */}
+      {/* Hacia dónde lleva la escalera desde este piso ("↑ P2"), o de quién es el vacío. */}
       {f.detalle && !vertical && (
         <div
-          title={f.detalleCompleto}
-          className="pointer-events-auto mt-0.5 block w-fit max-w-full truncate rounded-sm bg-[rgb(var(--sys-rgb))] px-1.5 text-[10px] font-semibold text-white"
+          title={f.detalleCompleto ?? f.detalle}
+          className={cn(
+            'pointer-events-auto mt-0.5 block w-fit max-w-full truncate rounded-sm px-1.5 text-[10px] font-semibold',
+            f.tipo === 'VACIO' ? 'bg-white/80 text-slate-800' : 'bg-indigo-600 text-white',
+          )}
         >
           {f.detalle}
         </div>
@@ -356,10 +440,13 @@ export function PlanoLienzo({
     </div>
   )
 
-  const insignia = (f: FiguraPlano) =>
+  const insignia = (f: FiguraPlano, color: string) =>
     f.tipo === 'LUGAR' &&
     (f.productos ?? 0) > 0 && (
-      <span className="pointer-events-none absolute top-1 right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgb(var(--sys-rgb))] px-1.5 text-[11px] font-bold text-white">
+      <span
+        className="pointer-events-none absolute top-1 right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-white"
+        style={{ backgroundColor: color }}
+      >
         {f.productos}
       </span>
     )
@@ -369,7 +456,7 @@ export function PlanoLienzo({
       type="button"
       aria-label={`Girar ${f.nombre}`}
       title="Girar"
-      className="absolute top-1 left-1/2 z-30 flex size-7 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-line bg-white text-[rgb(var(--sys-rgb))] shadow hover:bg-surface-alt"
+      className="absolute top-1 left-1/2 z-30 flex size-7 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-line bg-white text-slate-700 shadow hover:bg-surface-alt"
       onPointerDown={(e) => e.stopPropagation()}
       onClick={() => onGirar?.(f.clave)}
     >
@@ -382,7 +469,7 @@ export function PlanoLienzo({
       <div
         ref={lienzo}
         className={cn(
-          'relative box-content rounded-lg border-[3px] border-[rgb(var(--sys-dark-rgb))] bg-slate-50',
+          'relative box-content rounded-lg border-[3px] border-[rgb(var(--sys-dark-rgb))] bg-white',
           ampliando && 'cursor-crosshair',
         )}
         style={fondo}
@@ -396,28 +483,21 @@ export function PlanoLienzo({
           const esLugar = f.tipo === 'LUGAR'
           const moviendo = vivo?.clave === f.clave
           const encima = sobre === f.clave
+          const p = pintura(f, elegida, resaltada, encima)
           const cursor = ampliando
             ? 'cursor-crosshair'
-            : editable
-              ? 'touch-none cursor-grab'
-              : esLugar || !soloLugares
-                ? 'cursor-pointer'
-                : 'cursor-default'
+            : soloLugares && !esLugar
+              ? 'cursor-default'
+              : editable && f.tipo !== 'VACIO'
+                ? 'touch-none cursor-grab'
+                : 'cursor-pointer'
 
-          // ---- Un lugar de varias partes (una L): un relleno y un solo borde por fuera, sin línea en medio.
+          // ---- Varias partes (una L): un relleno y un solo borde por fuera, sin línea en medio.
           if (rects.length > 1) {
             const minX = Math.min(...rects.map((r) => r.x))
             const minY = Math.min(...rects.map((r) => r.y))
             const maxX = Math.max(...rects.map((r) => r.x + r.ancho))
             const maxY = Math.max(...rects.map((r) => r.y + r.alto))
-            const relleno = encima
-              ? 'rgb(var(--sys-rgb) / 0.25)'
-              : resaltada
-                ? '#fef3c7'
-                : elegida
-                  ? 'rgb(var(--sys-rgb) / 0.22)'
-                  : 'rgb(var(--sys-rgb) / 0.07)'
-            const colorBorde = encima || elegida ? 'rgb(var(--sys-rgb))' : resaltada ? '#f59e0b' : 'rgb(var(--sys-dark-rgb) / 0.8)'
             const idRecorte = `recorte-${f.clave}`
             return (
               <div key={f.clave} className={cn(moviendo && 'opacity-90', f.inactivo && 'opacity-50')}>
@@ -442,10 +522,10 @@ export function PlanoLienzo({
                         y={(r.y - minY) * celda}
                         width={r.ancho * celda}
                         height={r.alto * celda}
-                        style={{ fill: relleno }}
+                        style={{ fill: p.fondo }}
                       />
                     ))}
-                    {/* El borde se dibuja al doble y se recorta a la figura: queda 3px por dentro, como los demás. */}
+                    {/* El borde se dibuja al doble y se recorta a la figura: queda por dentro, como los demás. */}
                     {bordeExterior(rects).map((t, i) => (
                       <line
                         key={i}
@@ -453,10 +533,10 @@ export function PlanoLienzo({
                         y1={(t.y1 - minY) * celda}
                         x2={(t.x2 - minX) * celda}
                         y2={(t.y2 - minY) * celda}
-                        strokeWidth={6}
+                        strokeWidth={p.grosor * 2}
                         strokeLinecap="square"
-                        strokeDasharray={encima ? '6 4' : undefined}
-                        style={{ stroke: colorBorde }}
+                        strokeDasharray={p.discontinuo ? '6 4' : undefined}
+                        style={{ stroke: p.borde }}
                       />
                     ))}
                   </g>
@@ -464,17 +544,18 @@ export function PlanoLienzo({
                 {rects.map((r, i) => (
                   <div
                     key={i}
-                    role={i === 0 ? 'button' : undefined}
+                    role={i === 0 && esLugar ? 'button' : undefined}
                     aria-label={i === 0 ? `${f.codigo ?? ''} ${f.nombre}` : `${f.nombre} (parte ${i + 1})`}
                     className={cn('group/fig absolute select-none', cursor, elegida && 'z-10')}
-                    style={posicion(r)}
+                    // Los vacíos llevan su rayado oscuro en cada parte (el SVG solo lo tiñe).
+                    style={{ ...posicion(r), backgroundImage: p.patron }}
                     onPointerDown={(e) => empezar(e, f, 'mover', i)}
                     {...destinoProducto(f)}
                   >
-                    {i === 0 && etiqueta(f, false)}
-                    {i === 0 && insignia(f)}
+                    {i === 0 && etiqueta(f, false, p.texto)}
+                    {i === 0 && insignia(f, p.borde)}
                     {/* Sin botón de girar: un lugar con partes no se gira (primero se le quitan). */}
-                    {asas(f, i, moviendo, rects)}
+                    {asas(f, i, moviendo, rects, p.borde)}
                   </div>
                 ))}
               </div>
@@ -485,29 +566,6 @@ export function PlanoLienzo({
           // Angosto y alto (un pasillo vertical): el nombre se escribe de arriba abajo.
           const vertical = principal.ancho <= 2 && principal.alto >= principal.ancho * 2
 
-          /*
-           * Un solo color de borde y de fondo, elegido aquí: dos clases del mismo tipo juntas (border-slate-700 y
-           * border-amber-500) no se pisan por orden en el className sino por orden en la hoja de estilos.
-           */
-          const borde = encima
-            ? 'border-dashed border-[rgb(var(--sys-rgb))]'
-            : elegida
-              ? 'border-[rgb(var(--sys-rgb))]'
-              : resaltada
-                ? 'border-amber-500'
-                : f.tipo === 'PASILLO'
-                  ? 'border-dashed border-[rgb(var(--sys-rgb)/0.55)]'
-                  : 'border-[rgb(var(--sys-dark-rgb)/0.8)]'
-          const relleno = !esLugar
-            ? ''
-            : encima
-              ? 'bg-[rgb(var(--sys-rgb)/0.25)]'
-              : resaltada
-                ? 'bg-amber-100'
-                : elegida
-                  ? 'bg-[rgb(var(--sys-rgb)/0.22)]'
-                  : 'bg-[rgb(var(--sys-rgb)/0.07)]'
-
           return (
             <div
               key={f.clave}
@@ -515,23 +573,27 @@ export function PlanoLienzo({
               aria-label={esLugar ? `${f.codigo ?? ''} ${f.nombre}` : f.nombre}
               className={cn(
                 'group/fig absolute box-border overflow-visible select-none',
-                f.tipo === 'PASILLO' ? 'border-2' : 'border-[3px]',
                 esLugar && 'rounded-[3px]',
-                borde,
-                relleno,
                 cursor,
                 moviendo && 'z-20 cursor-grabbing opacity-90 shadow-xl',
                 f.inactivo && 'opacity-50',
-                elegida && 'z-10 ring-[3px] ring-[rgb(var(--sys-rgb)/0.3)]',
+                elegida && 'z-10 ring-[3px] ring-slate-900/25',
               )}
-              style={{ ...posicion(principal), ...ESTILO[f.tipo] }}
+              style={{
+                ...posicion(principal),
+                backgroundColor: p.fondo,
+                backgroundImage: p.patron,
+                borderColor: p.borde,
+                borderWidth: p.grosor,
+                borderStyle: p.discontinuo ? 'dashed' : 'solid',
+              }}
               onPointerDown={(e) => empezar(e, f, 'mover')}
               {...destinoProducto(f)}
             >
-              {etiqueta(f, vertical)}
-              {insignia(f)}
-              {asas(f, 0, moviendo, [principal])}
-              {editable && elegida && onGirar && !moviendo && !ampliando && botonGirar(f)}
+              {etiqueta(f, vertical, p.texto)}
+              {insignia(f, p.borde)}
+              {asas(f, 0, moviendo, [principal], p.borde)}
+              {editable && elegida && onGirar && f.tipo !== 'VACIO' && !moviendo && !ampliando && botonGirar(f)}
             </div>
           )
         })}
@@ -544,6 +606,17 @@ export function PlanoLienzo({
           />
         )}
       </div>
+
+      {leyenda && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-muted">
+          {LEYENDA.map((l) => (
+            <span key={l.nombre} className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-3 w-5 rounded-[2px] border-2" style={l.muestra} />
+              {l.nombre}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

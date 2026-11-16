@@ -4785,6 +4785,9 @@ namespace Backend.Data.Migrations
                     b.Property<int?>("PlanoAncho")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PlanoHastaPisoId")
+                        .HasColumnType("int");
+
                     b.Property<string>("PlanoPartes")
                         .HasColumnType("longtext");
 
@@ -4802,6 +4805,8 @@ namespace Backend.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PadreId");
+
+                    b.HasIndex("PlanoHastaPisoId");
 
                     b.HasIndex("AlmacenId", "PadreId", "Codigo")
                         .IsUnique();
@@ -6780,9 +6785,16 @@ namespace Backend.Data.Migrations
                         .HasForeignKey("PadreId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Backend.Models.UbicacionAlmacen", "PlanoHastaPiso")
+                        .WithMany()
+                        .HasForeignKey("PlanoHastaPisoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Almacen");
 
                     b.Navigation("Padre");
+
+                    b.Navigation("PlanoHastaPiso");
                 });
 
             modelBuilder.Entity("Backend.Models.Usuario", b =>

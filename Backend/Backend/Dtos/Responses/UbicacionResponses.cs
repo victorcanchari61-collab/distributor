@@ -36,6 +36,12 @@ public class UbicacionResponse
 
     /// <summary>Las partes extra (un cuarto en forma de L). Vacío: el lugar es solo su rectángulo principal.</summary>
     public List<RectPlano> PlanoPartes { get; set; } = [];
+
+    /// <summary>Doble altura: el piso hasta donde está abierto. Nulo: solo ocupa su piso.</summary>
+    public int? PlanoHastaPisoId { get; set; }
+
+    /// <summary>Los pisos que ocupa en el plano, de abajo hacia arriba: el suyo y, con doble altura, los de encima.</summary>
+    public List<int> PlanoPisos { get; set; } = [];
 }
 
 /// <summary>Un pasillo o una escalera del plano.</summary>

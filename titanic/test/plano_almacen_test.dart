@@ -326,6 +326,146 @@ void main() {
     },
   );
 
+  test('la ubicacion lee su doble altura, y sin ella ocupa solo su piso', () {
+    final doble = Ubicacion.desdeJson({
+      'id': 1,
+      'padreId': 10,
+      'planoHastaPisoId': 20.0,
+      'planoPisos': [10, 20.0],
+    });
+    expect(doble.planoHastaPisoId, 20);
+    expect(doble.planoPisos, [10, 20]);
+
+    final simple = Ubicacion.desdeJson({'id': 2, 'padreId': 10});
+    expect(simple.planoHastaPisoId, isNull);
+    expect(simple.planoPisos, [10]);
+
+    final nulo = Ubicacion.desdeJson({
+      'id': 3,
+      'padreId': 10,
+      'planoHastaPisoId': null,
+      'planoPisos': null,
+    });
+    expect(nulo.planoPisos, [10]);
+
+    expect(Ubicacion.desdeJson({'id': 4}).planoPisos, isEmpty);
+  });
+
+  testWidgets(
+    'un lugar de doble altura es un vacio en el piso de arriba: tocarlo lleva '
+    'a su piso y lo abre',
+    (tester) async {
+      await _montar(
+        tester,
+        _ApiFalsa(
+          lugares: [
+            _lugar(10, 'P1', tipo: 'PISO'),
+            {
+              ..._lugar(
+                11,
+                '01',
+                padreId: 10,
+                nombre: 'Cocina',
+                ruta: 'P1-01',
+                productos: 1,
+                rect: [0, 0, 6, 4],
+              ),
+              'planoHastaPisoId': 20,
+              'planoPisos': [10, 20],
+            },
+            _lugar(20, 'P2', tipo: 'PISO'),
+            _lugar(
+              21,
+              '01',
+              padreId: 20,
+              nombre: 'Terraza',
+              ruta: 'P2-01',
+              rect: [10, 0, 6, 4],
+            ),
+          ],
+          productos: [
+            {
+              'productoId': 100,
+              'codigo': 'AZU-01',
+              'producto': 'Azúcar rubia',
+              'unidadBase': 'KG',
+              'stock': 12,
+              'lugares': [
+                {'ubicacionId': 11, 'ruta': 'P1-01', 'nombre': 'Cocina'},
+              ],
+            },
+          ],
+        ),
+      );
+
+      // En su piso es un lugar como cualquiera.
+      expect(find.text('Cocina'), findsOneWidget);
+      expect(find.text('Vacío'), findsNothing);
+
+      // Arriba, su area es un vacio.
+      await tester.tap(find.text('P2'));
+      await tester.pumpAndSettle();
+      expect(find.text('Terraza'), findsOneWidget);
+      expect(find.text('Cocina'), findsNothing);
+      expect(find.text('Vacío'), findsOneWidget);
+      expect(find.text('doble altura de P1-01 · Cocina'), findsOneWidget);
+
+      // Tocarlo lleva a P1 y abre el lugar.
+      await tester.tap(find.text('Vacío'));
+      await tester.pumpAndSettle();
+      expect(find.text('Vacío'), findsNothing);
+      expect(find.text('Cocina'), findsOneWidget);
+      expect(find.text('Azúcar rubia'), findsOneWidget);
+      expect(find.text('12 KG'), findsOneWidget);
+    },
+  );
+
+  testWidgets('un pasillo de doble altura es un vacio en el piso de arriba', (
+    tester,
+  ) async {
+    await _montar(
+      tester,
+      _ApiFalsa(
+        lugares: [
+          _lugar(10, 'P1', tipo: 'PISO'),
+          _lugar(11, '01', padreId: 10, ruta: 'P1-01', rect: [0, 0, 4, 4]),
+          _lugar(20, 'P2', tipo: 'PISO'),
+        ],
+        elementos: [
+          {
+            'id': 1,
+            'pisoId': 10,
+            'hastaPisoId': 20,
+            'pisos': [10, 20],
+            'tipo': 'PASILLO',
+            'nombre': 'Pasillo',
+            'x': 4,
+            'y': 0,
+            'ancho': 4,
+            'alto': 14,
+          },
+        ],
+      ),
+    );
+
+    expect(find.text('Pasillo'), findsOneWidget);
+    expect(find.text('Vacío'), findsNothing);
+
+    // En P2 ya no es pasillo: es el hueco.
+    await tester.tap(find.text('P2'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pasillo'), findsNothing);
+    expect(find.text('Vacío'), findsOneWidget);
+    expect(find.text('doble altura de P1'), findsOneWidget);
+    expect(find.text('Este piso todavía no está dibujado'), findsNothing);
+
+    // Tocarlo lleva a su piso.
+    await tester.tap(find.text('Vacío'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pasillo'), findsOneWidget);
+    expect(find.text('Vacío'), findsNothing);
+  });
+
   testWidgets('un pasillo no lleva destino', (tester) async {
     await _montar(tester, _conPisos());
     expect(find.textContaining('Sube a'), findsNothing);

@@ -84,14 +84,22 @@ public class PlanoService : IPlanoService
             if (!Plano.Conectadas(todas))
                 throw new BadRequestException("Cada parte tiene que tocar al resto del lugar, por un lado.");
 
-            await ExigirLibreAsync(lugar.AlmacenId, [lugar.PadreId], todas, lugarId: lugar.Id, elementoId: null);
+            // Doble altura: sin dato se queda como estaba; el mismo piso del lugar se la quita.
+            var orden = await PisosEnOrdenAsync(lugar.AlmacenId);
+            var hasta = lugar.PlanoHastaPisoId;
+            if (request.HastaPisoId is int pedido)
+                hasta = pedido == lugar.PadreId ? null : ExigirEncima(lugar.PadreId, pedido, orden);
+
+            await ExigirLibreAsync(lugar.AlmacenId, PisosDe(lugar.PadreId, hasta, orden), todas, lugarId: lugar.Id, elementoId: null);
             (lugar.PlanoX, lugar.PlanoY, lugar.PlanoAncho, lugar.PlanoAlto) = (x, y, ancho, alto);
             lugar.PlanoPartes = Plano.EscribirPartes(partes);
+            lugar.PlanoHastaPisoId = hasta;
         }
         else
         {
             (lugar.PlanoX, lugar.PlanoY, lugar.PlanoAncho, lugar.PlanoAlto) = (null, null, null, null);
             lugar.PlanoPartes = null;
+            lugar.PlanoHastaPisoId = null;
         }
 
         await _context.SaveChangesAsync();
@@ -117,9 +125,12 @@ public class PlanoService : IPlanoService
             throw new BadRequestException("Este almacén usa pisos: elige en qué piso va.");
         }
 
+        // La escalera llega a otro piso; un pasillo puede estar abierto hasta un piso de arriba (doble altura).
         int? hasta = request.Tipo == TipoElementoPlano.Escalera
             ? ExigirLlegada(request.PisoId, request.HastaPisoId, orden)
-            : null;
+            : request.HastaPisoId is int pedido && pedido != request.PisoId
+                ? ExigirEncima(request.PisoId, pedido, orden)
+                : null;
 
         var rect = new RectPlano(request.X, request.Y, request.Ancho, request.Alto);
         await ExigirLibreAsync(almacenId, PisosDe(request.PisoId, hasta, orden), [rect], null, null);
@@ -151,10 +162,13 @@ public class PlanoService : IPlanoService
             ?? throw new NotFoundException("Ese pasillo o escalera ya no existe");
 
         var orden = await PisosEnOrdenAsync(elemento.AlmacenId);
-        // A dónde llega la escalera: se puede cambiar; sin dato, la de siempre.
-        var hasta = elemento.Tipo == TipoElementoPlano.Escalera && request.HastaPisoId is not null
-            ? ExigirLlegada(elemento.PisoId, request.HastaPisoId, orden)
-            : elemento.HastaPisoId;
+        // A dónde llega la escalera, o hasta dónde está abierto el pasillo: sin dato, lo de siempre. En un pasillo,
+        // su mismo piso le quita la doble altura.
+        var hasta = elemento.HastaPisoId;
+        if (request.HastaPisoId is int pedido)
+            hasta = elemento.Tipo == TipoElementoPlano.Escalera
+                ? ExigirLlegada(elemento.PisoId, pedido, orden)
+                : pedido == elemento.PisoId ? null : ExigirEncima(elemento.PisoId, pedido, orden);
 
         var rect = new RectPlano(request.X, request.Y, request.Ancho, request.Alto);
         await ExigirLibreAsync(elemento.AlmacenId, PisosDe(elemento.PisoId, hasta, orden), [rect], null, id);
@@ -182,31 +196,29 @@ public class PlanoService : IPlanoService
     // ------------------------------------------------------------- Pisos y escaleras
 
     /// <summary>Los pisos del almacén de abajo hacia arriba: por el número de su código (P2 antes que P10).</summary>
-    private async Task<List<int>> PisosEnOrdenAsync(int almacenId) =>
-        (await _context.UbicacionesAlmacen.AsNoTracking()
+    private async Task<List<int>> PisosEnOrdenAsync(int almacenId)
+    {
+        var pisos = await _context.UbicacionesAlmacen.AsNoTracking()
             .Where(u => u.AlmacenId == almacenId && u.PadreId == null && u.Tipo == TipoUbicacion.Piso)
             .Select(u => new { u.Id, u.Codigo })
-            .ToListAsync())
-        .OrderBy(p => NumeroDePiso(p.Codigo))
-        .ThenBy(p => p.Id)
-        .Select(p => p.Id)
-        .ToList();
-
-    private static int NumeroDePiso(string codigo) =>
-        codigo.Length > 1 && char.ToUpperInvariant(codigo[0]) == 'P' && int.TryParse(codigo[1..], out var n) ? n : int.MaxValue;
+            .ToListAsync();
+        return Plano.OrdenarPisos(pisos.Select(p => (p.Id, p.Codigo)));
+    }
 
     /// <summary>
-    /// Los pisos que ocupa un elemento: el suyo; una escalera, todos desde su piso hasta el de llegada, de abajo hacia
-    /// arriba. En un almacén sin pisos, solo su plano (nulo).
+    /// Los pisos que ocupa algo: el suyo; una escalera o una doble altura, todos desde su piso hasta el otro, de abajo
+    /// hacia arriba. En un almacén sin pisos, solo su plano (nulo).
     /// </summary>
-    private static List<int?> PisosDe(int? pisoId, int? hastaPisoId, List<int> orden)
+    private static List<int?> PisosDe(int? pisoId, int? hastaPisoId, List<int> orden) => Plano.PisosEntre(pisoId, hastaPisoId, orden);
+
+    /// <summary>Una doble altura llega a un piso de arriba del suyo, de este mismo almacén.</summary>
+    private static int ExigirEncima(int? pisoId, int hastaPisoId, List<int> orden)
     {
-        if (pisoId is not int a || hastaPisoId is not int b) return [pisoId];
-        var i = orden.IndexOf(a);
-        var j = orden.IndexOf(b);
-        if (i < 0 || j < 0) return [pisoId];
-        var (desde, hasta) = i <= j ? (i, j) : (j, i);
-        return orden.Skip(desde).Take(hasta - desde + 1).Select(p => (int?)p).ToList();
+        if (pisoId is not int piso)
+            throw new BadRequestException("La doble altura se usa en un almacén con pisos.");
+        if (!Plano.EstaEncima(piso, hastaPisoId, orden))
+            throw new BadRequestException("La doble altura llega a un piso de arriba de este.");
+        return hastaPisoId;
     }
 
     /// <summary>Una escalera une pisos: tiene que llegar a otro piso de este mismo almacén.</summary>
@@ -240,12 +252,11 @@ public class PlanoService : IPlanoService
 
         var lugares = (await _context.UbicacionesAlmacen.AsNoTracking()
                 .Where(u => u.AlmacenId == almacenId && u.Tipo != TipoUbicacion.Piso && u.PlanoX != null && u.Id != lugarId)
-                .Select(u => new { u.PadreId, u.Codigo, u.Nombre, X = u.PlanoX!.Value, Y = u.PlanoY!.Value, Ancho = u.PlanoAncho!.Value, Alto = u.PlanoAlto!.Value, u.PlanoPartes })
+                .Select(u => new { u.PadreId, u.PlanoHastaPisoId, u.Codigo, u.Nombre, X = u.PlanoX!.Value, Y = u.PlanoY!.Value, Ancho = u.PlanoAncho!.Value, Alto = u.PlanoAlto!.Value, u.PlanoPartes })
                 .ToListAsync())
-            .Where(u => pisos.Contains(u.PadreId))
             .Select(u => new
             {
-                Pisos = (IReadOnlyList<int?>)[u.PadreId],
+                Pisos = (IReadOnlyList<int?>)PisosDe(u.PadreId, u.PlanoHastaPisoId, orden),
                 Nombre = u.Nombre is null ? u.Codigo : $"{u.Codigo} · {u.Nombre}",
                 Rects = (List<RectPlano>)[new RectPlano(u.X, u.Y, u.Ancho, u.Alto), .. Plano.LeerPartes(u.PlanoPartes)],
             });

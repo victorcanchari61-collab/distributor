@@ -43,6 +43,12 @@ public class PosicionPlanoRequest
     /// principal. Cada parte tiene que tocar al resto del lugar.
     /// </summary>
     public List<RectPlanoRequest>? Partes { get; set; }
+
+    /// <summary>
+    /// Doble altura: el piso de arriba hasta donde el lugar está abierto. Nulo: se queda como estaba (mover no la
+    /// cambia). El mismo piso del lugar: se le quita (vuelve a ocupar solo el suyo).
+    /// </summary>
+    public int? HastaPisoId { get; set; }
 }
 
 /// <summary>Un rectángulo de la cuadrícula, en celdas.</summary>
@@ -64,7 +70,8 @@ public class ElementoPlanoRequest
     public string Tipo { get; set; } = string.Empty;
 
     /// <summary>
-    /// Solo escaleras: el piso al que llega (obligatorio al crearla; al cambiarla, sin dato se queda el que tenía).
+    /// Una escalera: el piso al que llega (obligatorio al crearla). Un pasillo: hasta dónde está abierto (doble
+    /// altura); el mismo piso del pasillo se la quita. Al cambiarlo, sin dato se queda el que tenía.
     /// </summary>
     public int? HastaPisoId { get; set; }
 

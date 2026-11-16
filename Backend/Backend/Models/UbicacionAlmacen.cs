@@ -64,6 +64,13 @@ public class UbicacionAlmacen
     /// y rodea una escalera. Nulo: el lugar es solo su rectángulo principal. Se lee con <see cref="Plano.LeerPartes"/>.
     /// </summary>
     public string? PlanoPartes { get; set; }
+
+    /// <summary>
+    /// Doble altura: el piso hasta donde el lugar está abierto, sin suelo encima (un depósito alto). En los pisos de
+    /// arriba hasta este, su mismo espacio es un vacío donde no se dibuja nada. Nulo: solo ocupa su piso.
+    /// </summary>
+    public int? PlanoHastaPisoId { get; set; }
+    public UbicacionAlmacen? PlanoHastaPiso { get; set; }
 }
 
 /// <summary>El tamaño de la cuadrícula del plano de cada piso, en celdas.</summary>
@@ -93,6 +100,37 @@ public static class Plano
 
     public static string? EscribirPartes(IReadOnlyCollection<RectPlano> partes) =>
         partes.Count == 0 ? null : JsonSerializer.Serialize(partes, Json);
+
+    /// <summary>El número de un piso por su código (P2 → 2); los que no siguen la serie van al final.</summary>
+    public static int NumeroDePiso(string codigo) =>
+        codigo.Length > 1 && char.ToUpperInvariant(codigo[0]) == 'P' && int.TryParse(codigo[1..], out var n) ? n : int.MaxValue;
+
+    /// <summary>Los pisos de abajo hacia arriba: por el número de su código (P2 antes que P10).</summary>
+    public static List<int> OrdenarPisos(IEnumerable<(int Id, string Codigo)> pisos) =>
+        pisos.OrderBy(p => NumeroDePiso(p.Codigo)).ThenBy(p => p.Id).Select(p => p.Id).ToList();
+
+    /// <summary>
+    /// Los pisos que ocupa algo que va de un piso a otro (una escalera, una doble altura), de abajo hacia arriba y
+    /// con los del medio. Sin el otro piso, solo el suyo; en un almacén sin pisos, su único plano (nulo).
+    /// </summary>
+    public static List<int?> PisosEntre(int? desde, int? hasta, IReadOnlyList<int> orden)
+    {
+        if (desde is not int a || hasta is not int b) return [desde];
+        var i = orden.ToList().IndexOf(a);
+        var j = orden.ToList().IndexOf(b);
+        if (i < 0 || j < 0) return [desde];
+        var (menor, mayor) = i <= j ? (i, j) : (j, i);
+        return orden.Skip(menor).Take(mayor - menor + 1).Select(p => (int?)p).ToList();
+    }
+
+    /// <summary>Si el piso `arriba` está encima de `piso` (lo que pide una doble altura).</summary>
+    public static bool EstaEncima(int piso, int arriba, IReadOnlyList<int> orden)
+    {
+        var lista = orden.ToList();
+        var i = lista.IndexOf(piso);
+        var j = lista.IndexOf(arriba);
+        return i >= 0 && j > i;
+    }
 
     /// <summary>Si todas las partes forman una sola figura: desde la primera se llega a cada una tocándose por un lado.</summary>
     public static bool Conectadas(IReadOnlyList<RectPlano> partes)

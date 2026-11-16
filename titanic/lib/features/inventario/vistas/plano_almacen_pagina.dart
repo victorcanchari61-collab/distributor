@@ -201,9 +201,20 @@ class _PlanoAlmacenPaginaState extends ConsumerState<PlanoAlmacenPagina> {
       _verLugar(context, almacenId, lugar, coincidencias);
     }
 
+    // Un vacio no es de este piso: tocarlo lleva al de abajo y, si es un
+    // lugar, lo abre.
+    void irAVacio(_VacioPlano vacio) {
+      if (vacio.lugar case final lugar?) {
+        irALugar(lugar.id);
+      } else {
+        ref.read(pisoPlanoProvider.notifier).state = vacio.pisoOrigen;
+      }
+    }
+
     final clave = '$almacenId-$piso';
     final dibujados = mapa.dibujados(piso);
     final elementos = mapa.elementos(piso);
+    final vacios = mapa.vacios(piso);
     final sinDibujar = mapa.sinDibujar(piso);
 
     return _Desplazable(
@@ -256,7 +267,7 @@ class _PlanoAlmacenPaginaState extends ConsumerState<PlanoAlmacenPagina> {
             ),
           ),
         const SizedBox(height: Dimen.espacio2),
-        if (dibujados.isEmpty && elementos.isEmpty)
+        if (dibujados.isEmpty && elementos.isEmpty && vacios.isEmpty)
           const AppVacio(
             icono: Icons.grid_off_outlined,
             titulo: 'Este piso todavía no está dibujado',
@@ -274,8 +285,10 @@ class _PlanoAlmacenPaginaState extends ConsumerState<PlanoAlmacenPagina> {
               destinos: {
                 for (final e in elementos) e.id: mapa.destino(e, piso),
               },
+              vacios: vacios,
               resaltados: resaltados,
               onTocar: (l) => _verLugar(context, almacenId, l, coincidencias),
+              onVacio: irAVacio,
               onAmpliado: (ampliado) =>
                   setState(() => _claveAmpliada = ampliado ? clave : null),
             ),
@@ -390,14 +403,47 @@ class _MapaAlmacen {
   ];
 
   /// Los pasillos y escaleras de un plano: los suyos y las escaleras que lo
-  /// cruzan aunque arranquen en otro piso.
+  /// cruzan aunque arranquen en otro piso. Un pasillo de doble altura, en los
+  /// pisos de arriba, no es pasillo sino un vacio (ver [vacios]).
   List<ElementoPlano> elementos(int clave) => [
     for (final e in plano.elementos)
       if (clave == _sinPiso
           ? e.pisoId == null && e.pisos.isEmpty
-          : e.pisoId == clave || e.pisos.contains(clave))
+          : e.pisoId == clave || (e.esEscalera && e.pisos.contains(clave)))
         e,
   ];
+
+  /// Lo que en este piso es un vacio: el area de los lugares y pasillos de
+  /// abajo que tienen doble altura y llegan abiertos hasta aqui. No se puede
+  /// poner nada ahi.
+  List<_VacioPlano> vacios(int clave) {
+    if (clave == _sinPiso) return const [];
+    String codigoPiso(int? id) => porId[id]?.codigo ?? '';
+    return [
+      for (final u in lista)
+        if (!u.esPiso &&
+            u.dibujado &&
+            u.padreId != clave &&
+            u.planoPisos.contains(clave))
+          _VacioPlano(
+            forma: _FormaLugar.de(u),
+            detalle:
+                'doble altura de '
+                '${u.nombre == null ? u.ruta : '${u.ruta} · ${u.nombre}'}',
+            pisoOrigen: pisoDe(u),
+            lugar: u,
+          ),
+      for (final e in plano.elementos)
+        if (!e.esEscalera && e.pisoId != clave && e.pisos.contains(clave))
+          _VacioPlano(
+            forma: _FormaLugar.deRects(
+              RectPlano(x: e.x, y: e.y, ancho: e.ancho, alto: e.alto),
+            ),
+            detalle: 'doble altura de ${codigoPiso(e.pisoId)}'.trim(),
+            pisoOrigen: e.pisoId ?? _sinPiso,
+          ),
+    ];
+  }
 
   /// A donde lleva una escalera desde el piso que se mira: "Sube a P2 · P3",
   /// "Baja a P1" o, en un piso del medio, las dos cosas. Los pisos van en el
@@ -428,6 +474,29 @@ class _MapaAlmacen {
         if (!dibujadosIds.contains(u.id)) u,
     ];
   }
+}
+
+/// El area de un lugar o un pasillo de doble altura en un piso de arriba: un
+/// hueco abierto al piso de abajo, donde no se puede poner nada.
+class _VacioPlano {
+  const _VacioPlano({
+    required this.forma,
+    required this.detalle,
+    required this.pisoOrigen,
+    this.lugar,
+  });
+
+  /// Las celdas que ocupa: las mismas que abajo.
+  final _FormaLugar forma;
+
+  /// "doble altura de P1-03 · Depósito" o "doble altura de P1".
+  final String detalle;
+
+  /// El piso donde esta de verdad: tocar el vacio lleva ahi.
+  final int pisoOrigen;
+
+  /// El lugar de abajo; null si es un pasillo.
+  final Ubicacion? lugar;
 }
 
 /// La pagina deslizable, con jalar para recargar.
@@ -708,8 +777,10 @@ class _Plano extends StatefulWidget {
     required this.lugares,
     required this.elementos,
     this.destinos = const {},
+    this.vacios = const [],
     required this.resaltados,
     required this.onTocar,
+    required this.onVacio,
     required this.onAmpliado,
   });
 
@@ -721,9 +792,13 @@ class _Plano extends StatefulWidget {
   /// Por id de escalera, a donde lleva desde este piso ("Sube a P2").
   final Map<int, String> destinos;
 
+  /// Lo que en este piso es hueco de la doble altura de algo de abajo.
+  final List<_VacioPlano> vacios;
+
   /// Los ids de los lugares que tienen lo que se busca.
   final Set<int> resaltados;
   final ValueChanged<Ubicacion> onTocar;
+  final ValueChanged<_VacioPlano> onVacio;
   final ValueChanged<bool> onAmpliado;
 
   @override
@@ -812,6 +887,7 @@ class _PlanoState extends State<_Plano> {
                               destino: widget.destinos[e.id] ?? '',
                             ),
                           ),
+                        for (final v in widget.vacios) _vacio(v, celda),
                         for (final l in widget.lugares)
                           if (l.planoPartes.isEmpty)
                             rectangulo(
@@ -868,6 +944,23 @@ class _PlanoState extends State<_Plano> {
       ),
     );
   }
+
+  /// El hueco de una doble altura: la misma figura que abajo, rayada.
+  Widget _vacio(_VacioPlano v, double celda) {
+    final caja = v.forma.caja;
+    return Positioned(
+      left: caja.left * celda,
+      top: caja.top * celda,
+      width: caja.width * celda,
+      height: caja.height * celda,
+      child: _FiguraVacio(
+        vacio: v,
+        celda: celda,
+        resaltado: v.lugar != null && widget.resaltados.contains(v.lugar!.id),
+        onTap: () => widget.onVacio(v),
+      ),
+    );
+  }
 }
 
 /// Las celdas que ocupa un lugar con partes: la union de su rectangulo
@@ -875,18 +968,29 @@ class _PlanoState extends State<_Plano> {
 class _FormaLugar {
   _FormaLugar._(this.celdas, this.caja, this.principal);
 
-  factory _FormaLugar.de(Ubicacion l) {
-    Rect rect(int x, int y, int ancho, int alto) => Rect.fromLTWH(
-      x.toDouble(),
-      y.toDouble(),
-      math.max(1, ancho).toDouble(),
-      math.max(1, alto).toDouble(),
+  factory _FormaLugar.de(Ubicacion l) => _FormaLugar.deRects(
+    RectPlano(
+      x: l.planoX!,
+      y: l.planoY!,
+      ancho: l.planoAncho!,
+      alto: l.planoAlto!,
+    ),
+    l.planoPartes,
+  );
+
+  /// Un rectangulo principal y, si tiene, sus partes de mas.
+  factory _FormaLugar.deRects(
+    RectPlano rectPrincipal, [
+    List<RectPlano> partes = const [],
+  ]) {
+    Rect rect(RectPlano r) => Rect.fromLTWH(
+      r.x.toDouble(),
+      r.y.toDouble(),
+      math.max(1, r.ancho).toDouble(),
+      math.max(1, r.alto).toDouble(),
     );
-    final principal = rect(l.planoX!, l.planoY!, l.planoAncho!, l.planoAlto!);
-    final rects = [
-      principal,
-      for (final p in l.planoPartes) rect(p.x, p.y, p.ancho, p.alto),
-    ];
+    final principal = rect(rectPrincipal);
+    final rects = [principal, for (final p in partes) rect(p)];
     final celdas = <(int, int)>{
       for (final r in rects)
         for (var x = r.left.toInt(); x < r.right.toInt(); x++)
@@ -1057,6 +1161,205 @@ class _FiguraLugar extends StatelessWidget {
       ),
     );
   }
+}
+
+// Los colores del vacio: rayas oscuras en diagonal (slate-800 al 25 % sobre
+// un fondo al 7 %) y borde punteado slate-600.
+const _vacioFondo = Color(0x121E293B);
+const _vacioRaya = Color(0x401E293B);
+const _vacioBorde = Color(0xFF475569);
+const _vacioTinta = Color(0xFF334155);
+
+/// El hueco de una doble altura en un piso de arriba. No es un lugar: tocarlo
+/// lleva al piso de abajo (y, si es un lugar, lo abre).
+class _FiguraVacio extends StatelessWidget {
+  const _FiguraVacio({
+    required this.vacio,
+    required this.celda,
+    required this.resaltado,
+    required this.onTap,
+  });
+
+  final _VacioPlano vacio;
+  final double celda;
+  final bool resaltado;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final forma = vacio.forma;
+    final principal = forma.principal;
+    final caja = forma.caja;
+    return ClipPath(
+      clipper: _RecorteForma(forma, celda),
+      child: CustomPaint(
+        painter: _PintorVacio(
+          forma: forma,
+          celda: celda,
+          fondo: resaltado ? _ambarFondo : _vacioFondo,
+          raya: resaltado ? const Color(0x66F59E0B) : _vacioRaya,
+          borde: resaltado ? _ambarBorde : _vacioBorde,
+          grosor: resaltado ? 2 : 1.2,
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            child: Stack(
+              children: [
+                Positioned(
+                  left: (principal.left - caja.left) * celda + 1,
+                  top: (principal.top - caja.top) * celda + 1,
+                  width: math.max(1, principal.width * celda - 2),
+                  height: math.max(1, principal.height * celda - 2),
+                  child: _RotuloVacio(
+                    detalle: vacio.detalle,
+                    resaltado: resaltado,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Vacío" y, debajo y mas chico, de que es la doble altura.
+class _RotuloVacio extends StatelessWidget {
+  const _RotuloVacio({required this.detalle, required this.resaltado});
+
+  final String detalle;
+  final bool resaltado;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, caja) {
+        final letra = (math.min(caja.maxWidth, caja.maxHeight) / 3.2).clamp(
+          5.0,
+          12.0,
+        );
+        final tinta = resaltado ? _ambarTinta : _vacioTinta;
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(2),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                color: const Color(0xD9FFFFFF),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Vacío',
+                      style: TextStyle(
+                        fontSize: letra,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
+                        color: tinta,
+                      ),
+                    ),
+                    if (detalle.isNotEmpty)
+                      Text(
+                        detalle,
+                        style: TextStyle(
+                          fontSize: letra * 0.75,
+                          height: 1.1,
+                          color: tinta,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// El relleno rayado y el borde punteado de un vacio, por fuera de su figura
+/// (sin lineas donde se tocan sus partes), con el mismo hueco de 1 que deja
+/// cada caja con lo de al lado.
+class _PintorVacio extends CustomPainter {
+  const _PintorVacio({
+    required this.forma,
+    required this.celda,
+    required this.fondo,
+    required this.raya,
+    required this.borde,
+    required this.grosor,
+  });
+
+  final _FormaLugar forma;
+  final double celda;
+  final Color fondo;
+  final Color raya;
+  final Color borde;
+  final double grosor;
+
+  static const _hueco = 1.0;
+  static const _separacion = 8.0;
+  static const _guion = 4.0;
+  static const _espacio = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final contorno = forma.contorno(celda);
+    canvas.save();
+    canvas.clipPath(contorno);
+    canvas.saveLayer(Offset.zero & size, Paint());
+    canvas.drawPath(contorno, Paint()..color = fondo);
+
+    final rayas = Paint()
+      ..color = raya
+      ..strokeWidth = 3;
+    for (var d = -size.height; d < size.width; d += _separacion) {
+      canvas.drawLine(
+        Offset(d, size.height),
+        Offset(d + size.height, 0),
+        rayas,
+      );
+    }
+
+    // Guiones a lo largo del contorno; el recorte deja solo su mitad de adentro.
+    final lapiz = Paint()
+      ..color = borde
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (_hueco + grosor) * 2;
+    for (final tramo in contorno.computeMetrics()) {
+      for (var t = 0.0; t < tramo.length; t += _guion + _espacio) {
+        canvas.drawPath(
+          tramo.extractPath(t, math.min(t + _guion, tramo.length)),
+          lapiz,
+        );
+      }
+    }
+
+    // El hueco se borra para que se vea la cuadricula de abajo.
+    canvas.drawPath(
+      contorno,
+      Paint()
+        ..blendMode = BlendMode.clear
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _hueco * 2,
+    );
+    canvas.restore();
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_PintorVacio anterior) =>
+      anterior.forma != forma ||
+      anterior.celda != celda ||
+      anterior.fondo != fondo ||
+      anterior.raya != raya ||
+      anterior.borde != borde ||
+      anterior.grosor != grosor;
 }
 
 /// Un lugar del plano: su codigo, su nombre y cuantos productos tiene.

@@ -113,6 +113,10 @@ export interface UbicacionResponse {
   planoAlto: number | null
   /** Las partes extra (un lugar en forma de L, que rodea una escalera). Vacío: es solo su rectángulo principal. */
   planoPartes: RectPlano[]
+  /** Doble altura: el piso de arriba hasta donde está abierto, sin suelo encima. Nulo: solo ocupa su piso. */
+  planoHastaPisoId: number | null
+  /** Los pisos que ocupa en el plano, de abajo hacia arriba: el suyo y, con doble altura, los de encima. */
+  planoPisos: number[]
 }
 
 export interface UbicacionProductoResponse {
@@ -223,10 +227,11 @@ export const planoApi = {
    * Dibuja un lugar, lo mueve o le cambia el tamaño; con null lo saca del plano (el lugar queda). `partes` son TODAS
    * sus partes extra: reemplazan a las que tenía (sin ellas, el lugar queda solo con el rectángulo principal).
    */
-  posicionar: (ubicacionId: number, rect: RectPlano | null, partes: RectPlano[] = []) =>
+  posicionar: (ubicacionId: number, rect: RectPlano | null, partes: RectPlano[] = [], hastaPisoId?: number) =>
     api.put<UbicacionResponse>(
       `/ubicacion/${ubicacionId}/plano`,
-      rect ? { ...rect, partes } : { x: null, y: null, ancho: null, alto: null },
+      // hastaPisoId: la doble altura (su mismo piso se la quita); sin él, se queda como estaba.
+      rect ? { ...rect, partes, hastaPisoId } : { x: null, y: null, ancho: null, alto: null },
     ),
   crearElemento: (almacenId: number, body: ElementoPlanoRequest) =>
     api.post<ElementoPlano>(`/almacen/${almacenId}/plano/elementos`, body),

@@ -70,6 +70,8 @@ public class UbicacionService : IUbicacionService
     private static List<UbicacionResponse> EnOrdenDeArbol(List<UbicacionAlmacen> filas, Dictionary<int, int> productos)
     {
         var porPadre = filas.ToLookup(u => u.PadreId);
+        // El orden de los pisos, para decir qué pisos ocupa una doble altura.
+        var orden = Plano.OrdenarPisos(filas.Where(u => u.PadreId == null && u.Tipo == TipoUbicacion.Piso).Select(u => (u.Id, u.Codigo)));
         var resultado = new List<UbicacionResponse>(filas.Count);
 
         void Recorrer(int? padreId, string rutaPadre, int nivel)
@@ -96,6 +98,10 @@ public class UbicacionService : IUbicacionService
                     PlanoAncho = u.PlanoAncho,
                     PlanoAlto = u.PlanoAlto,
                     PlanoPartes = Plano.LeerPartes(u.PlanoPartes),
+                    PlanoHastaPisoId = u.PlanoHastaPisoId,
+                    PlanoPisos = u.Tipo == TipoUbicacion.Piso
+                        ? []
+                        : Plano.PisosEntre(u.PadreId, u.PlanoHastaPisoId, orden).OfType<int>().ToList(),
                 });
                 Recorrer(u.Id, ruta, nivel + 1);
             }

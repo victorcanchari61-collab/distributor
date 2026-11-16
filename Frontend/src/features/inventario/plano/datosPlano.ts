@@ -56,10 +56,12 @@ export function figurasDe(lugares: UbicacionResponse[], plano: PlanoResponse | n
       ancho: l.planoAncho ?? 2,
       alto: l.planoAlto ?? 2,
       partes: l.planoPartes ?? [],
+      color: l.id,
     }))
   // Lo de este piso y las escaleras que lo cruzan, aunque se hayan puesto desde otro piso.
-  const deElementos: FiguraPlano[] = (plano?.elementos ?? [])
-    .filter((e) => e.pisoId === pisoId || (pisoId !== null && e.pisos.includes(pisoId)))
+  const elementos = plano?.elementos ?? []
+  const deElementos: FiguraPlano[] = elementos
+    .filter((e) => e.pisoId === pisoId || (pisoId !== null && e.tipo === 'ESCALERA' && e.pisos.includes(pisoId)))
     .map((e) => ({
       clave: `E${e.id}`,
       tipo: e.tipo,
@@ -71,14 +73,63 @@ export function figurasDe(lugares: UbicacionResponse[], plano: PlanoResponse | n
       ancho: e.ancho,
       alto: e.alto,
     }))
+
+  /*
+   * Doble altura: lo que en un piso de abajo está abierto hasta este (un pasillo, un depósito alto) aquí es un vacío,
+   * sin suelo. Se dibuja con su misma forma para que no se ponga nada encima; tocarlo lleva a lo de abajo.
+   */
+  const codigoDe = (id: number | null) => lugares.find((l) => l.id === id)?.codigo ?? ''
+  const vacios: FiguraPlano[] =
+    pisoId === null
+      ? []
+      : [
+          ...elementos
+            .filter((e) => e.tipo === 'PASILLO' && e.pisoId !== pisoId && e.pisos.includes(pisoId))
+            .map(
+              (e): FiguraPlano => ({
+                clave: `VE${e.id}`,
+                tipo: 'VACIO',
+                nombre: 'Vacío',
+                detalle: `doble altura de ${codigoDe(e.pisoId)}`,
+                x: e.x,
+                y: e.y,
+                ancho: e.ancho,
+                alto: e.alto,
+              }),
+            ),
+          ...lugares
+            .filter((l) => l.tipo === 'CUARTO' && l.planoX !== null && l.padreId !== pisoId && (l.planoPisos ?? []).includes(pisoId))
+            .map(
+              (l): FiguraPlano => ({
+                clave: `VL${l.id}`,
+                tipo: 'VACIO',
+                nombre: 'Vacío',
+                detalle: `doble altura de ${l.ruta}${l.nombre ? ` · ${l.nombre}` : ''}`,
+                x: l.planoX ?? 0,
+                y: l.planoY ?? 0,
+                ancho: l.planoAncho ?? 2,
+                alto: l.planoAlto ?? 2,
+                partes: l.planoPartes ?? [],
+              }),
+            ),
+        ]
   // Los pasillos van debajo: un lugar elegido no queda tapado por el pasillo de al lado.
-  return [...deElementos, ...deLugares]
+  return [...deElementos, ...vacios, ...deLugares]
+}
+
+/**
+ * De dónde viene un vacío: "VL12" es la doble altura del lugar 12; "VE5", la del pasillo 5. Null si la clave no es de
+ * un vacío.
+ */
+export const origenDeVacio = (clave: string): { clave: string; id: number; esLugar: boolean } | null => {
+  const m = /^V([LE])(\d+)$/.exec(clave)
+  return m ? { clave: `${m[1]}${m[2]}`, id: Number(m[2]), esLugar: m[1] === 'L' } : null
 }
 
 /** Si el almacén tiene algo dibujado en el plano: sin eso no tiene sentido ofrecer elegir en él. */
 export const tienePlano = (lugares: UbicacionResponse[]) => lugares.some((l) => l.tipo === 'CUARTO' && l.planoX !== null)
 
-/** "L12" → 12. Las claves de pasillos y escaleras empiezan con E. */
+/** "L12" → 12. Las claves de pasillos y escaleras empiezan con E (las de los vacíos, con V: ver origenDeVacio). */
 export const idDeClave = (clave: string) => Number(clave.slice(1))
 
 /** Para buscar sin que importen mayúsculas ni tildes: "Leche Glória" encuentra "leche gloria". */

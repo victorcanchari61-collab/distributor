@@ -30,7 +30,7 @@ import {
   rectsDe,
   tocan,
 } from './geometria'
-import { figurasDe, idDeClave, normalizar, pisosDe, usePlanoAlmacen } from './datosPlano'
+import { figurasDe, idDeClave, normalizar, origenDeVacio, pisosDe, usePlanoAlmacen } from './datosPlano'
 
 const SUBMODULO = 'inv.plano'
 
@@ -140,7 +140,8 @@ export function PlanoPage() {
     [productos, q],
   )
   const lugaresHallados = useMemo(() => new Set(hallados.flatMap((p) => p.lugares.map((l) => l.ubicacionId))), [hallados])
-  const resaltadas = useMemo(() => new Set([...lugaresHallados].map((id) => `L${id}`)), [lugaresHallados])
+  // Lo encontrado y, si es un lugar de doble altura, también su vacío en los pisos de arriba.
+  const resaltadas = useMemo(() => new Set([...lugaresHallados].flatMap((id) => [`L${id}`, `VL${id}`])), [lugaresHallados])
 
   /** Cuántos lugares con lo buscado hay en cada piso: el número de su pestaña. */
   const halladosPorPiso = (id: number) => lugares.filter((l) => l.padreId === id && lugaresHallados.has(l.id)).length
@@ -265,7 +266,7 @@ export function PlanoPage() {
   /** Girar: el ancho pasa a ser el alto. Si girado se encima con algo, se avisa y no se mueve. */
   const girar = (clave: string) => {
     const f = figuras.find((x) => x.clave === clave)
-    if (!f) return
+    if (!f || f.tipo === 'VACIO') return
     if (f.partes?.length) return toast.error('Un lugar con partes extra no se gira: quítaselas antes.')
     const r = girado(f, columnas, filas)
     if (!r || !estaLibre(figuras, clave, r)) return toast.error('No hay espacio libre para girarlo.')
@@ -275,11 +276,12 @@ export function PlanoPage() {
   /** Una copia del mismo tamaño en el primer hueco libre: para hacer varios pasillos o lugares iguales. */
   const duplicar = (clave: string) => {
     const f = figuras.find((x) => x.clave === clave)
-    if (!f) return
+    if (!f || f.tipo === 'VACIO') return
+    const tipo = f.tipo
     const r = huecoLibre(figuras, columnas, filas, f.ancho, f.alto)
     if (!r) return toast.error('No hay espacio libre del mismo tamaño en este plano.')
     void conOcupado(async () => {
-      if (f.tipo === 'LUGAR') {
+      if (tipo === 'LUGAR') {
         const nuevo = await ubicacionApi.crear(almacenId, { padreId: pisoId, tipo: 'CUARTO', nombre: f.nombre })
         await planoApi.posicionar(nuevo.id, r)
         await recargar()
@@ -290,7 +292,7 @@ export function PlanoPage() {
         const nuevo = await planoApi.crearElemento(almacenId, {
           pisoId: original?.pisoId ?? pisoId,
           hastaPisoId: original?.hastaPisoId ?? null,
-          tipo: f.tipo,
+          tipo,
           nombre: f.nombre,
           ...r,
         })
@@ -298,6 +300,68 @@ export function PlanoPage() {
         setSeleccion(`E${nuevo.id}`)
       }
     }, 'No pudimos duplicarlo.')
+  }
+
+  // ------------------------------------------------------------- Doble altura
+
+  /** Los pisos de encima de uno: hasta donde puede llegar una doble altura. */
+  const pisosEncima = (id: number | null) => {
+    const i = pisos.findIndex((p) => p.id === id)
+    return i < 0 ? [] : pisos.slice(i + 1)
+  }
+
+  /**
+   * Abrir un lugar o un pasillo hasta un piso de arriba (o cerrarlo: su mismo piso). En los pisos de encima ese
+   * espacio queda como vacío; el servidor revisa que allá esté libre.
+   */
+  const cambiarAltura = (clave: string, hastaPisoId: number) =>
+    void conOcupado(async () => {
+      if (clave.startsWith('L')) {
+        const l = lugares.find((x) => x.id === idDeClave(clave))
+        if (!l || l.planoX === null) return
+        const principal = { x: l.planoX, y: l.planoY ?? 0, ancho: l.planoAncho ?? 2, alto: l.planoAlto ?? 2 }
+        await planoApi.posicionar(l.id, principal, l.planoPartes, hastaPisoId)
+      } else {
+        const el = plano?.elementos.find((e) => e.id === idDeClave(clave))
+        if (!el) return
+        await planoApi.actualizarElemento(el.id, { ...el, hastaPisoId })
+      }
+      await recargar()
+    }, 'No pudimos cambiar la doble altura.')
+
+  /** El selector "Abierto hasta": solo su piso, o hasta uno de arriba. */
+  const selectorAltura = (clave: string, pisoPropio: number | null, hasta: number | null) =>
+    pisoPropio !== null &&
+    pisosEncima(pisoPropio).length > 0 && (
+      <div className="flex flex-col gap-1">
+        <Desplegable
+          label="Doble altura"
+          disabled={!puedeEditar || ocupado}
+          value={hasta ?? pisoPropio}
+          onChange={(v) => cambiarAltura(clave, Number(v))}
+          options={[
+            { value: pisoPropio, label: 'No: tiene techo (solo este piso)' },
+            ...pisosEncima(pisoPropio).map((p) => ({
+              value: p.id,
+              label: `Abierto hasta ${p.codigo}${p.nombre ? ` · ${p.nombre}` : ''}`,
+            })),
+          ]}
+        />
+        {hasta !== null && (
+          <p className="text-xs text-ink-soft">En los pisos de arriba este espacio sale como «Vacío»: ahí no hay suelo.</p>
+        )}
+      </div>
+    )
+
+  /** Tocar un vacío lleva a lo que lo hace: el lugar o pasillo del piso de abajo. */
+  const elegir = (clave: string | null) => {
+    const origen = clave ? origenDeVacio(clave) : null
+    if (!origen) return setSeleccion(clave)
+    const piso = origen.esLugar
+      ? lugares.find((l) => l.id === origen.id)?.padreId
+      : plano?.elementos.find((e) => e.id === origen.id)?.pisoId
+    if (piso != null) setPisoElegido(piso)
+    setSeleccion(origen.clave)
   }
 
   /** A qué piso llega la escalera: el servidor revisa que ese lugar esté libre en todos los pisos que pasa a cruzar. */
@@ -522,6 +586,7 @@ export function PlanoPage() {
           ) : (
             <ul className="max-h-80 divide-y divide-line overflow-y-auto">{aqui.map((p) => filaProducto(p, lugarElegido.id))}</ul>
           )}
+          {lugarElegido.planoX !== null && selectorAltura(`L${lugarElegido.id}`, lugarElegido.padreId, lugarElegido.planoHastaPisoId)}
           {puedeEditar && lugarElegido.planoX !== null && (
             <div className="grid grid-cols-2 gap-2">
               {/* Darle forma: sumarle partes (una L que rodea la escalera) o quitarle la última. */}
@@ -585,6 +650,7 @@ export function PlanoPage() {
             onBlur={guardarNombre}
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
+          {elementoElegido.tipo === 'PASILLO' && selectorAltura(`E${elementoElegido.id}`, elementoElegido.pisoId, elementoElegido.hastaPisoId)}
           {elementoElegido.tipo === 'ESCALERA' && elementoElegido.pisoId !== null && pisos.length > 1 && (
             <>
               <p className="text-sm text-ink-muted">
@@ -825,7 +891,8 @@ export function PlanoPage() {
               seleccionada={seleccion}
               resaltadas={resaltadas}
               editable={puedeEditar}
-              onSeleccionar={setSeleccion}
+              onSeleccionar={elegir}
+              leyenda
               onCambiar={(clave, rect, partes) => void cambiar(clave, rect, partes)}
               ampliando={ampliando}
               onAmpliar={ampliar}
