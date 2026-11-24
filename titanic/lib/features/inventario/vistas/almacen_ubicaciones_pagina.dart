@@ -66,7 +66,7 @@ class AlmacenUbicacionesPagina extends ConsumerWidget {
                     icono: Icons.layers_outlined,
                     titulo: 'Sin lugares definidos',
                     detalle:
-                        'Este almacén todavía no tiene pisos ni cuartos. '
+                        'Este almacén todavía no tiene pisos ni lugares. '
                         'Se arman desde el panel web.',
                   )
                 : ListView.separated(

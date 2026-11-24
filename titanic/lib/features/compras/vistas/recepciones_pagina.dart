@@ -39,7 +39,10 @@ class RecepcionesPagina extends ConsumerWidget {
         ref.watch(recepcionesProvider).valueOrNull ??
         const <DocumentoInventario>[];
     final confirmadas = todas.where((d) => !d.anulado).length;
-    final hayPendientes = ref.watch(comprasConPendienteProvider).isNotEmpty;
+    final anuladas = todas.length - confirmadas;
+    final porRecibir = ref.watch(comprasConPendienteProvider).length;
+    final hayPendientes = porRecibir > 0;
+    final puedeRecibir = puede(ref, 'compras.recepciones', Accion.crear);
 
     return AppListaPagina<DocumentoInventario>(
       titulo: 'Recepciones',
@@ -87,9 +90,6 @@ class RecepcionesPagina extends ConsumerWidget {
       iconoVacio: Icons.move_to_inbox_outlined,
       singular: 'recepción',
       plural: 'recepciones',
-      detalleVacio: hayPendientes
-          ? null
-          : 'No hay compras con mercadería pendiente por recibir.',
       indicadores: [
         AppTarjetaDato(
           etiqueta: 'Recepciones',
@@ -114,6 +114,32 @@ class RecepcionesPagina extends ConsumerWidget {
             onTap: () => ref.read(filtroDocumentoProvider.notifier).state =
                 FiltroDocumento.vigentes,
           ),
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Anuladas',
+          valor: '$anuladas',
+          icono: Icons.undo,
+          tono: DatoTono.neutral,
+          progreso: todas.isNotEmpty ? anuladas / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: anuladas > 0 ? 'Ver las $anuladas' : 'Ver',
+            onTap: () => ref.read(filtroDocumentoProvider.notifier).state =
+                FiltroDocumento.anulados,
+          ),
+        ),
+        // Lo que todavía falta llegar: compras pendientes o recibidas en parte. Su enlace abre la recepción.
+        AppTarjetaDato(
+          etiqueta: 'Compras por recibir',
+          valor: '$porRecibir',
+          icono: Icons.shopping_bag_outlined,
+          tono: DatoTono.aviso,
+          progreso: hayPendientes ? 1 : 0,
+          accion: hayPendientes && puedeRecibir
+              ? AccionDato(
+                  etiqueta: 'Recibir',
+                  onTap: () => _abrirFormulario(context),
+                )
+              : null,
         ),
       ],
       filtro: BotonFiltros(

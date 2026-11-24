@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../compartido/catalogo_listo.dart';
 import '../../../compartido/formato.dart';
 import '../../../compartido/widgets/app_alerta.dart';
+import '../../../compartido/widgets/app_boton.dart';
 import '../../../compartido/widgets/app_botones_formulario.dart';
 import '../../../compartido/widgets/app_campo.dart';
 import '../../../compartido/widgets/app_selector.dart';
@@ -14,6 +15,7 @@ import '../../../core/tema/colores.dart';
 import '../../../core/tema/dimensiones.dart';
 import '../../inventario/datos/almacen.dart';
 import '../../inventario/estado/inventario_controlador.dart';
+import '../../inventario/vistas/plano_almacen_pagina.dart';
 import '../datos/compra.dart';
 import '../estado/compras_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
@@ -114,16 +116,38 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
   /// solo se puede usar al construir, y `_guardar` tambien necesita estos datos.
   List<Ubicacion> _lugaresVistos = const [];
 
-  /// Donde se recibe, dentro del almacen elegido: un piso y, adentro, un cuarto.
+  /// Donde se recibe, dentro del almacen elegido: un piso y, adentro, un lugar.
   /// Es un solo lugar para toda la recepcion, no uno por linea.
   int? _pisoId;
   int? _cuartoId;
 
-  /// El lugar donde queda todo lo que llega: el cuarto si se eligio; si no, el
+  /// El lugar donde queda todo lo que llega: el lugar si se eligio; si no, el
   /// piso; si no, ninguno. Solo cuenta si sigue siendo un lugar de este almacen.
   int? _lugarFinal(List<Ubicacion> lugares) {
     final id = _cuartoId ?? _pisoId;
     return lugares.any((l) => l.id == id) ? id : null;
+  }
+
+  /// Abre el plano del almacen y pone el lugar tocado (y su piso).
+  Future<void> _elegirEnPlano(List<Ubicacion> lugares) async {
+    final almacenId = _almacenId;
+    if (almacenId == null) return;
+    final lugar = await ElegirLugarPlano.abrir(
+      context,
+      almacenId: almacenId,
+      elegidoId: _cuartoId,
+    );
+    if (lugar == null || !mounted) return;
+    final padre = lugares.where((l) => l.id == lugar.padreId).firstOrNull;
+    setState(() {
+      if (lugar.esPiso) {
+        _pisoId = lugar.id;
+        _cuartoId = null;
+      } else {
+        _pisoId = padre != null && padre.esPiso ? padre.id : null;
+        _cuartoId = lugar.id;
+      }
+    });
   }
 
   List<_FilaRecepcion> _construirFilas(Compra? compra) {
@@ -343,8 +367,9 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
             ),
             const SizedBox(height: Dimen.espacio4),
 
-            // Donde se recibe: piso y, adentro, cuarto. Siempre se ven; si el
-            // almacen no tiene pisos ni cuartos quedan desactivados.
+            // Donde se recibe: piso y, adentro, lugar. Siempre se ven; si el
+            // almacen no tiene pisos ni lugares quedan desactivados. Si tiene
+            // plano, el lugar tambien se puede tocar en el dibujo.
             Builder(
               builder: (context) {
                 final pisos = lugaresDelAlmacen
@@ -382,23 +407,36 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                     const SizedBox(height: Dimen.espacio4),
                     AppSelector<int?>(
                       valor: _cuartoId,
-                      etiqueta: 'Cuarto',
-                      icono: Icons.meeting_room_outlined,
+                      etiqueta: 'Lugar',
+                      icono: Icons.place_outlined,
                       habilitado: !_guardando && cuartos.isNotEmpty,
                       opciones: [
                         Opcion<int?>(
                           null,
-                          cuartos.isEmpty ? 'Sin cuartos' : 'Sin cuarto',
+                          cuartos.isEmpty ? 'Sin lugares' : 'Sin lugar',
                         ),
                         for (final c in cuartos) Opcion<int?>(c.id, nombre(c)),
                       ],
                       onCambio: (v) => setState(() => _cuartoId = v),
                     ),
+                    if (_almacenId != null &&
+                        ElegirLugarPlano.hayPlano(lugaresDelAlmacen)) ...[
+                      const SizedBox(height: Dimen.espacio2),
+                      AppBoton(
+                        texto: 'Elegir en el plano',
+                        icono: Icons.map_outlined,
+                        variante: BotonVariante.secundario,
+                        tam: BotonTam.md,
+                        onPressed: _guardando
+                            ? null
+                            : () => _elegirEnPlano(lugaresDelAlmacen),
+                      ),
+                    ],
                     if (lugaresDelAlmacen.isEmpty && _almacenId != null)
                       const Padding(
                         padding: EdgeInsets.only(top: Dimen.espacio2),
                         child: Text(
-                          'Este almacén todavía no tiene pisos ni cuartos: se '
+                          'Este almacén todavía no tiene pisos ni lugares: se '
                           'crean desde el panel web.',
                           style: TextStyle(
                             fontSize: 12,

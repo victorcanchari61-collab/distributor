@@ -47,6 +47,7 @@ class MisComprasPagina extends ConsumerWidget {
     final recibidas = todas
         .where((c) => c.estado == EstadoCompra.recibidaTotal)
         .length;
+    final anuladas = todas.where((c) => c.estado == EstadoCompra.anulada).length;
     final estadoFiltro = ref.watch(estadoCompraFiltroProvider);
 
     return AppListaPagina<Compra>(
@@ -129,6 +130,18 @@ class MisComprasPagina extends ConsumerWidget {
             etiqueta: recibidas > 0 ? 'Ver las $recibidas' : 'Ver',
             onTap: () => ref.read(estadoCompraFiltroProvider.notifier).state =
                 EstadoCompra.recibidaTotal,
+          ),
+        ),
+        AppTarjetaDato(
+          etiqueta: 'Anuladas',
+          valor: '$anuladas',
+          icono: Icons.block,
+          tono: DatoTono.neutral,
+          progreso: todas.isNotEmpty ? anuladas / todas.length : 0,
+          accion: AccionDato(
+            etiqueta: anuladas > 0 ? 'Ver las $anuladas' : 'Ver',
+            onTap: () => ref.read(estadoCompraFiltroProvider.notifier).state =
+                EstadoCompra.anulada,
           ),
         ),
       ],

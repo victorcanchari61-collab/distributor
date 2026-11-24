@@ -335,6 +335,158 @@ class _PlanoAlmacenPaginaState extends ConsumerState<PlanoAlmacenPagina> {
   }
 }
 
+/// Elegir un lugar tocandolo en el plano, en vez de buscarlo en una lista.
+///
+/// Es el "Elegir en el plano" de la recepcion del panel web: se abre el plano
+/// del almacen y el lugar que se toca vuelve a quien lo pidio. Se usa el mismo
+/// dibujo que la pantalla del plano, sin busqueda ni detalle de lo que hay.
+class ElegirLugarPlano extends ConsumerStatefulWidget {
+  const ElegirLugarPlano({
+    super.key,
+    required this.almacenId,
+    this.elegidoId,
+  });
+
+  final int almacenId;
+
+  /// El lugar que ya estaba elegido: sale marcado.
+  final int? elegidoId;
+
+  /// Abre el plano y devuelve el lugar tocado, o null si se vuelve sin elegir.
+  /// El acento es el de quien lo abre: elegir es parte de su formulario.
+  static Future<Ubicacion?> abrir(
+    BuildContext context, {
+    required int almacenId,
+    int? elegidoId,
+  }) {
+    final acento = Acento.de(context);
+    return Navigator.of(context).push<Ubicacion>(
+      MaterialPageRoute(
+        builder: (_) => Acento(
+          color: acento,
+          child: ElegirLugarPlano(almacenId: almacenId, elegidoId: elegidoId),
+        ),
+      ),
+    );
+  }
+
+  /// Si vale la pena ofrecerlo: algun lugar del almacen esta dibujado.
+  static bool hayPlano(List<Ubicacion> lugares) =>
+      lugares.any((u) => !u.esPiso && u.dibujado);
+
+  @override
+  ConsumerState<ElegirLugarPlano> createState() => _ElegirLugarPlanoState();
+}
+
+class _ElegirLugarPlanoState extends ConsumerState<ElegirLugarPlano> {
+  /// El piso que se mira. Arranca en el del lugar ya elegido.
+  int? _piso;
+  bool _ampliado = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ubicaciones = ref.watch(ubicacionesProvider(widget.almacenId));
+    final plano = ref.watch(planoAlmacenProvider(widget.almacenId));
+    final lista = ubicaciones.valueOrNull;
+    final cuadricula = plano.valueOrNull;
+    final error = ubicaciones.error ?? plano.error;
+
+    Widget cuerpo;
+    if (lista == null || cuadricula == null) {
+      cuerpo = error != null && !ubicaciones.isLoading && !plano.isLoading
+          ? _Error(error, titulo: 'No se pudo cargar el plano')
+          : const _Cargando();
+    } else {
+      final mapa = _MapaAlmacen(
+        lista.where((u) => u.activo).toList(),
+        cuadricula,
+      );
+      final elegido = mapa.porId[widget.elegidoId];
+      final inicial = elegido == null ? null : mapa.pisoDe(elegido);
+      final piso = mapa.claves.contains(_piso)
+          ? _piso!
+          : mapa.claves.contains(inicial)
+          ? inicial!
+          : mapa.claves.first;
+      final dibujados = mapa.dibujados(piso);
+      final elementos = mapa.elementos(piso);
+      final marcados = {?widget.elegidoId};
+
+      void elegir(Ubicacion l) => Navigator.of(context).pop(l);
+
+      cuerpo = ListView(
+        physics: _ampliado
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(top: Dimen.espacio2),
+        children: [
+          if (mapa.claves.length > 1)
+            AppPestanas<int>(
+              activa: piso,
+              onCambio: (v) => setState(() => _piso = v),
+              pestanas: [
+                for (final k in mapa.claves)
+                  Pestana<int>(k, mapa.titulo(k), icono: Icons.layers_outlined),
+              ],
+            ),
+          const SizedBox(height: Dimen.espacio2),
+          if (dibujados.isEmpty && elementos.isEmpty)
+            const AppVacio(
+              icono: Icons.grid_off_outlined,
+              titulo: 'Este piso todavía no está dibujado',
+              detalle: _dondeSeDibuja,
+            )
+          else ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Dimen.espacio4),
+              child: _Plano(
+                key: ValueKey('elegir-${widget.almacenId}-$piso'),
+                columnas: math.max(1, cuadricula.columnas),
+                filas: math.max(1, cuadricula.filas),
+                lugares: dibujados,
+                elementos: elementos,
+                destinos: {
+                  for (final e in elementos) e.id: mapa.destino(e, piso),
+                },
+                vacios: mapa.vacios(piso),
+                resaltados: marcados,
+                onTocar: elegir,
+                // Un vacio es el hueco de algo de abajo: lleva a ese piso.
+                onVacio: (v) => setState(() => _piso = v.pisoOrigen),
+                onAmpliado: (a) => setState(() => _ampliado = a),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                Dimen.espacio4,
+                Dimen.espacio2,
+                Dimen.espacio4,
+                0,
+              ),
+              child: Text(
+                'Toca el lugar donde se recibe · pellizca para acercar',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colores.tintaTenue),
+              ),
+            ),
+          ],
+          if (mapa.sinDibujar(piso) case final sueltos when sueltos.isNotEmpty)
+            _SinDibujar(
+              lugares: sueltos,
+              resaltados: marcados,
+              onTocar: elegir,
+            ),
+          const SizedBox(height: Dimen.espacio6),
+        ],
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Elegir en el plano')),
+      body: cuerpo,
+    );
+  }
+}
 /// Espera a que terminen de recargar. Si alguna falla, el error ya lo pinta
 /// la pantalla: aqui no hay nada mas que hacer con el.
 Future<void> _esperar(List<Future<Object?>> cargas) async {
