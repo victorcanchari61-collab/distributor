@@ -5,7 +5,7 @@ import { Alert, Badge, ListPage, Tabs, PestanasVista } from '../../components/ui
 import type { ConsultaTabla, DataTableColumn, TabItem } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { almacenApi, kardexApi, motivoApi } from './inventarioApi'
-import type { AlmacenResponse, KardexResponse, MotivoResponse, ResumenKardex } from './inventarioApi'
+import type { AlmacenResponse, KardexResponse, MotivoResponse } from './inventarioApi'
 import { productoApi } from '../maestros'
 import type { ProductoResponse } from '../maestros'
 import { useRealtime } from '../../lib/realtime'
@@ -69,7 +69,6 @@ export function KardexPage() {
    */
   const [consulta, setConsulta] = useState<ConsultaTabla | null>(null)
   const [total, setTotal] = useState(0)
-  const [resumen, setResumen] = useState<ResumenKardex | null>(null)
 
   const cargarPagina = useCallback(
     async (q: ConsultaTabla) => {
@@ -88,21 +87,12 @@ export function KardexPage() {
     [almacenId],
   )
 
-  const cargarResumen = useCallback(async () => {
-    try {
-      setResumen(await kardexApi.resumen(almacenId || undefined))
-    } catch {
-      // Los contadores del pie son secundarios: la tabla igual sirve.
-    }
-  }, [almacenId])
-
   const cargar = useCallback(async () => {
-    await Promise.all([consulta ? cargarPagina(consulta) : Promise.resolve(), cargarResumen()])
-  }, [consulta, cargarPagina, cargarResumen])
+    if (consulta) await cargarPagina(consulta)
+  }, [consulta, cargarPagina])
 
   // Cambiar de almacen es cambiar el listado entero: se vuelve a pedir.
   useEffect(() => {
-    void cargarResumen()
     if (consulta) void cargarPagina({ ...consulta, pagina: 1 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [almacenId])
@@ -339,11 +329,6 @@ export function KardexPage() {
           cargando
             ? 'Cargando kardex...'
             : 'Todavía no hay movimientos. Se generan al registrar un ajuste.'
-        }
-        note={
-          <>
-            {resumen?.entradas ?? 0} entrada(s) · {resumen?.salidas ?? 0} salida(s)
-          </>
         }
       />
     </PestanasVista>

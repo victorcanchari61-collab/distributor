@@ -689,9 +689,13 @@ export function SysDataTable<T>({
 
     calcular()
     window.addEventListener('resize', calcular)
-    // La página crece o se encoge cuando llegan las tarjetas de resumen o un aviso: ahí se vuelve a medir.
+    // La página crece o se encoge cuando llegan las tarjetas de resumen o un aviso: ahí se vuelve a medir. Se mira
+    // también el panel de la pestaña: <main> mide al menos la pantalla, así que si la vista pierde sus tarjetas (al
+    // pasar de "Semana" a "Historial" la tabla se reutiliza) el body no cambia, pero el panel sí.
     const observador = new ResizeObserver(calcular)
     observador.observe(document.body)
+    const panel = el.closest('[role="tabpanel"]')
+    if (panel) observador.observe(panel)
     return () => {
       window.removeEventListener('resize', calcular)
       observador.disconnect()
