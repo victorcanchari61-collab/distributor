@@ -83,7 +83,7 @@ export function DashboardLayout({
         )}
       >
         {/* La franja de arriba: las pestañas abiertas a la izquierda; la cuenta y la campana a la derecha. */}
-        <header className="sticky top-0 z-30 flex items-end gap-2 bg-slate-200/80 pt-2 pr-3 pl-1 backdrop-blur sm:pr-5">
+        <header className="sticky top-0 z-30 flex items-end gap-2 bg-slate-200/80 pt-1.5 pr-3 pl-1 backdrop-blur sm:pr-5">
           {!barra && (
             <div className="mb-1 flex shrink-0 items-center">
               <button
@@ -111,7 +111,7 @@ export function DashboardLayout({
 
           <div className="min-w-0 flex-1">{pestanas}</div>
 
-          <div className="mb-1.5 flex shrink-0 items-center gap-2">
+          <div className="mb-1 flex shrink-0 items-center gap-2">
             <MenuCuenta
               nombre={userName}
               email={userEmail}

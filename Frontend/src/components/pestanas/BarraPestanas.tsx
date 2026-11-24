@@ -76,7 +76,7 @@ function Pestana({
         if (e.button === 1 && pestana.cerrable) onCerrar()
       }}
       className={cn(
-        'group relative flex h-9 max-w-[13rem] min-w-[7rem] shrink-0 cursor-pointer items-center gap-2 rounded-t-xl pr-1.5 pl-3',
+        'group relative flex h-8 max-w-[13rem] min-w-[7rem] shrink-0 cursor-pointer items-center gap-2 rounded-t-xl pr-1.5 pl-3',
         'text-[13px] text-[rgb(var(--sys-ink-rgb))] outline-none select-none',
         'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[rgb(var(--sys-rgb))]',
         activa ? ACTIVA : INACTIVA,
