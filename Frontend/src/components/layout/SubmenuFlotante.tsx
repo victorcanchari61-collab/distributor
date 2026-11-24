@@ -109,14 +109,16 @@ export function SubmenuFlotante({
             type="button"
             onClick={() => onSelect(item.id)}
             className={cn(
-              'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px]',
+              // Todas llevan el borde (transparente) para que el texto no salte al marcarse la activa. La activa: borde
+              // fino del color del módulo alrededor y uno grueso a la izquierda, con las esquinas redondeadas.
+              'flex w-full cursor-pointer items-center gap-2.5 rounded-lg border border-l-[3px] px-2.5 py-1.5 text-[13px]',
               'transition-colors',
               active === item.id
-                ? 'bg-[rgb(var(--sys-rgb)/0.1)] font-semibold text-[rgb(var(--sys-ink-rgb))]'
-                : 'text-ink-muted hover:bg-surface-alt hover:text-ink',
+                ? 'border-[rgb(var(--sys-rgb)/0.3)] border-l-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] font-semibold text-[rgb(var(--sys-ink-rgb))]'
+                : 'border-transparent text-ink-muted hover:bg-surface-alt hover:text-ink',
             )}
           >
-            <item.icon size={15} className="shrink-0" />
+            <item.icon size={15} className={cn('shrink-0', active === item.id && 'text-[rgb(var(--sys-rgb))]')} />
             <span className="flex-1 truncate text-left">{item.label}</span>
             {item.badge && (
               <span className="rounded-full bg-[rgb(var(--sys-rgb)/0.12)] px-1.5 py-0.5 text-[10px] font-bold text-[rgb(var(--sys-ink-rgb))]">
