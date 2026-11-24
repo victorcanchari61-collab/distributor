@@ -108,13 +108,13 @@ void main() {
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
 
-    // El primer modulo viene desplegado.
+    // Todos los modulos arrancan contraidos: no se ve ninguna vista del primero.
     expect(
       find.descendant(
         of: find.byType(Drawer),
         matching: find.text(menuGrupos.first.items.first.titulo),
       ),
-      findsOneWidget,
+      findsNothing,
     );
 
     // El titulo del modulo esta dos veces en pantalla (tarjeta del inicio y

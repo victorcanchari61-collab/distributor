@@ -7,6 +7,7 @@ import '../../compartido/widgets/app_boton.dart';
 import '../../compartido/widgets/app_shell.dart';
 import '../navegacion/menu.dart';
 import '../red/excepciones.dart';
+import '../tema/acento.dart';
 import '../tema/colores.dart';
 import '../tema/dimensiones.dart';
 import 'permisos.dart';
@@ -26,11 +27,19 @@ class PuertaPermiso extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ruta = GoRouterState.of(context).matchedLocation;
-    final item = resolverRuta(ruta).item;
+    final resuelta = resolverRuta(ruta);
+    final item = resuelta.item;
+
+    // El color del módulo se declara aquí, POR ENCIMA de la pantalla: AppShell
+    // también lo declara, pero por debajo, y una pantalla que abre una hoja con
+    // su propio context (los filtros, un detalle) no lo veía y la hoja salía con
+    // el azul de marca. Kardex es verde: sus filtros tienen que serlo.
+    final color = resuelta.grupo?.color;
+    final pantalla = color == null ? child : Acento(color: color, child: child);
 
     // Una ruta que no está en el menú no se protege: no hay submódulo al que
     // atarla, y bloquearla dejaría la app sin salida.
-    if (item == null) return child;
+    if (item == null) return pantalla;
 
     final permisos = ref.watch(misPermisosProvider);
 
@@ -47,7 +56,7 @@ class PuertaPermiso extends ConsumerWidget {
     // Tambien con el permiso de alguna de sus pestañas: Bancos se abre con solo
     // el de Metodos de pago, y adentro se ve nada mas que esa.
     if (puedeVer(ref, item.id) || item.incluye.any((s) => puedeVer(ref, s))) {
-      return child;
+      return pantalla;
     }
 
     return _SinAcceso(titulo: item.titulo, submodulo: item.id);

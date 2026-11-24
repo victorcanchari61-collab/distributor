@@ -5,7 +5,6 @@ import '../../../compartido/widgets/app_detalle_hoja.dart';
 import '../../../compartido/widgets/app_etiqueta.dart';
 import '../../../compartido/widgets/app_filtros.dart';
 import '../../../compartido/widgets/app_lista_pagina.dart';
-import '../../../compartido/widgets/app_tarjeta_dato.dart';
 import '../../../compartido/widgets/app_tarjeta_registro.dart';
 import '../../../core/navegacion/menu.dart';
 import '../../../core/tema/colores.dart';
@@ -25,13 +24,8 @@ class KardexPagina extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final color = resolverRuta(ruta).grupo?.color ?? Colores.marca;
-    final todos =
-        ref.watch(kardexProvider).valueOrNull ?? const <MovimientoKardex>[];
     final almacenes = ref.watch(almacenesActivosProvider);
     final almacenId = ref.watch(almacenKardexProvider);
-
-    final entradas = todos.where((k) => k.esEntrada).length;
-    final salidas = todos.length - entradas;
 
     return AppListaPagina<MovimientoKardex>(
       titulo: 'Kardex',
@@ -55,20 +49,6 @@ class KardexPagina extends ConsumerWidget {
         valor: almacenId,
         onCambio: (v) => ref.read(almacenKardexProvider.notifier).state = v,
       ),
-      indicadores: [
-        AppTarjetaDato(
-          etiqueta: 'Entradas',
-          valor: '$entradas',
-          icono: Icons.arrow_downward_rounded,
-          tono: DatoTono.exito,
-        ),
-        AppTarjetaDato(
-          etiqueta: 'Salidas',
-          valor: '$salidas',
-          icono: Icons.arrow_upward_rounded,
-          tono: DatoTono.aviso,
-        ),
-      ],
       filtro: BotonFiltros(
         activos: ref.watch(filtrosKardexActivosProvider),
         color: color,

@@ -50,9 +50,10 @@ class _AppDrawerState extends ConsumerState<AppDrawer> {
   }
 
   /// Modulo desplegado. Solo uno a la vez: con todos abiertos habria que
-  /// desplazar mucho para llegar al final.
-  late String? _abierto =
-      resolverRuta(widget.rutaActual).grupo?.id ?? menuGrupos.first.id;
+  /// desplazar mucho para llegar al final. Al abrir el menu arrancan todos
+  /// contraidos: antes se abria el del modulo actual (o, desde Inicio, el
+  /// primero, Dashboard) y tapaba los demas modulos.
+  String? _abierto;
 
   void _ir(MenuItem item) {
     Navigator.of(context).pop();
