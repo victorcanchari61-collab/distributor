@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Home, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Home, PanelLeftClose, PanelLeftOpen, EyeOff, X } from 'lucide-react'
 import { cn, Logo } from '../ui'
 import { NAV_GROUPS, puedeAbrir } from './navigation'
 import { SubmenuFlotante } from './SubmenuFlotante'
+import { useAccesosAlPasar } from './accesosAlPasar'
 import type { NavGroup } from './navigation'
 import { usePermisos } from '../../lib/permisos'
 
@@ -31,6 +32,8 @@ export function Sidebar({
   onOcultar,
 }: SidebarProps) {
   const { puedeVer, cargando } = usePermisos()
+  // Con el sider abierto, pasar el mouse por una vista muestra al lado sus accesos rápidos (Nuevo cliente, Importar…).
+  const accesos = useAccesosAlPasar({ onAbrirVista: onSelect })
 
   /*
    * El menu solo muestra lo que este usuario puede abrir, y un grupo entero
@@ -139,6 +142,7 @@ export function Sidebar({
               open={open.includes(group.id)}
               onToggle={() => toggleGroup(group.id)}
               onSelect={onSelect}
+              accesos={accesos}
             />
           ))}
         </nav>
@@ -179,6 +183,8 @@ export function Sidebar({
           </button>
         </div>
       </aside>
+
+      {accesos.panel}
     </>
   )
 }
@@ -190,6 +196,7 @@ function NavGroupBlock({
   open,
   onToggle,
   onSelect,
+  accesos,
 }: {
   group: NavGroup
   active: string
@@ -197,6 +204,7 @@ function NavGroupBlock({
   open: boolean
   onToggle: () => void
   onSelect: (id: string) => void
+  accesos: ReturnType<typeof useAccesosAlPasar>
 }) {
   const hasActive = group.items.some((i) => i.id === active)
   const GroupIcon = group.icon
@@ -279,6 +287,14 @@ function NavGroupBlock({
                 collapsed={false}
                 onClick={() => onSelect(item.id)}
                 small
+                conAccesos={accesos.tieneAccesos(item.id)}
+                resaltado={accesos.mostrando(item.id)}
+                onMouseEnter={(e) => {
+                  // El panel sale pegado al borde del sider, a la altura de este renglón.
+                  const sider = e.currentTarget.closest('aside')?.getBoundingClientRect()
+                  if (sider) accesos.entrar(item, group.sys, e.currentTarget.getBoundingClientRect(), sider)
+                }}
+                onMouseLeave={accesos.salir}
                 />
               ))}
           </div>
@@ -297,6 +313,10 @@ function NavButton({
   collapsed,
   onClick,
   small = false,
+  conAccesos = false,
+  resaltado = false,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   icon: React.ReactNode
   label: string
@@ -306,11 +326,19 @@ function NavButton({
   collapsed: boolean
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void
   small?: boolean
+  /** La vista tiene accesos rápidos: se marca con una flecha que se ve al pasar el mouse. */
+  conAccesos?: boolean
+  /** Su panel de accesos está abierto. */
+  resaltado?: boolean
+  onMouseEnter?: (e: React.MouseEvent<HTMLButtonElement>) => void
+  onMouseLeave?: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       title={collapsed ? label : pending ? `${label} — vista pendiente` : undefined}
       aria-current={active ? 'page' : undefined}
       className={cn(
@@ -319,7 +347,7 @@ function NavButton({
         collapsed && 'justify-center px-0',
         active
           ? 'bg-[rgb(var(--sys-rgb)/0.1)] font-semibold text-[rgb(var(--sys-ink-rgb))]'
-          : 'text-ink-muted hover:bg-surface-alt hover:text-ink',
+          : cn('text-ink-muted hover:bg-surface-alt hover:text-ink', resaltado && 'bg-surface-alt text-ink'),
       )}
     >
       {active && (
@@ -338,6 +366,13 @@ function NavButton({
           aria-hidden="true"
           className="size-1.5 shrink-0 rounded-full bg-line-strong"
           title="Pendiente"
+        />
+      )}
+      {!collapsed && conAccesos && (
+        <ChevronRight
+          size={14}
+          aria-hidden="true"
+          className={cn('shrink-0 transition-opacity', resaltado ? 'opacity-100' : 'opacity-0 group-hover:opacity-60')}
         />
       )}
     </button>
