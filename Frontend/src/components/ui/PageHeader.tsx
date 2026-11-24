@@ -5,6 +5,7 @@ import { usePestanasVista } from './contextoPestanas'
 
 export interface PageHeaderProps {
   title: string
+  /** Qué es la vista. No se pinta: sale como ayuda al pasar el mouse por el título. */
   description?: string
   /** Icono a la izquierda del titulo, con el color del sistema activo. */
   icon?: ReactNode
@@ -33,8 +34,7 @@ export function PageHeader({
       {/*
         Titulo y botones SIEMPRE en la misma fila, tambien en movil: apilados
         gastaban tres alturas antes del primer dato y empujaban la tabla fuera
-        de la pantalla. La descripcion baja a su propia linea, que es texto de
-        apoyo y puede esperar.
+        de la pantalla.
       */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         {/* flex-1 con un minimo: el titulo se lleva el ancho sobrante y nunca
@@ -46,7 +46,8 @@ export function PageHeader({
               {icon}
             </span>
           )}
-          <h1 className="truncate text-xl font-bold tracking-tight text-ink sm:text-2xl">
+          {/* La descripción ya no se pinta bajo el título (ocupaba una línea en cada vista): queda al pasar el mouse. */}
+          <h1 title={description} className="truncate text-xl font-bold tracking-tight text-ink sm:text-2xl">
             {title}
           </h1>
         </div>
@@ -86,9 +87,7 @@ export function PageHeader({
         )}
       </div>
 
-      {description && <p className="text-sm text-ink-muted">{description}</p>}
-
-      {/* Las pestañas de la vista, bajo el título y la descripción (ver PestanasVista). */}
+      {/* Las pestañas de la vista, bajo el título (ver PestanasVista). */}
       {pestanas && <div className="mt-1">{pestanas}</div>}
     </div>
   )
