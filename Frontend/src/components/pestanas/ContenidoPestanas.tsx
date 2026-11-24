@@ -1,6 +1,7 @@
 import { Component, Suspense } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { TriangleAlert } from 'lucide-react'
+import { SysVistaContext } from '../ui/sysVista'
 import { idPanel, idPestana } from './estadoPestanas'
 
 /** Si una pestaña se rompe, se rompe sola: las demás siguen funcionando. */
@@ -38,6 +39,7 @@ export function ContenidoPestanas({
   pintar,
   cargando,
   enFondo = [],
+  sysDe,
 }: {
   claves: string[]
   activa: string
@@ -50,6 +52,8 @@ export function ContenidoPestanas({
    * misma vista montada: no se vuelve a cargar.
    */
   enFondo?: string[]
+  /** El color (data-sys) de cada vista: sus modales salen con él aunque se abran sobre otra (ver sysVista.ts). */
+  sysDe?: (clave: string) => string
 }) {
   const montadas = [...claves, ...enFondo.filter((c) => !claves.includes(c))]
   return (
@@ -62,9 +66,11 @@ export function ContenidoPestanas({
           aria-labelledby={claves.includes(clave) ? idPestana(clave) : undefined}
           hidden={clave !== activa}
         >
-          <ErrorDePestana>
-            <Suspense fallback={cargando}>{pintar(clave)}</Suspense>
-          </ErrorDePestana>
+          <SysVistaContext.Provider value={sysDe?.(clave)}>
+            <ErrorDePestana>
+              <Suspense fallback={cargando}>{pintar(clave)}</Suspense>
+            </ErrorDePestana>
+          </SysVistaContext.Provider>
         </div>
       ))}
     </>

@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useContext, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from './cn'
 import { DentroDeModal } from './contextoModal'
+import { SysVistaContext } from './sysVista'
 
 export interface ModalProps {
   open: boolean
@@ -30,6 +31,9 @@ export function Modal({
   className,
   children,
 }: ModalProps) {
+  // El color de la vista que lo abre, que puede no ser la que está a la vista (ver sysVista.ts).
+  const sys = useContext(SysVistaContext)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -57,6 +61,7 @@ export function Modal({
 
   return createPortal(
     <div
+      data-sys={sys}
       role="dialog"
       aria-modal="true"
       aria-label={title}

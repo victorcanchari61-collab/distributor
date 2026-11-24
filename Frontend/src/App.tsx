@@ -279,6 +279,7 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
         activa={pestanas.activa}
         cargando={<Cargando />}
         enFondo={enFondo}
+        sysDe={(clave) => resolveNav(clave).group?.sys ?? 'brand'}
         pintar={(clave) => (clave === '' ? <Inicio /> : clave === PERFIL ? <MiPerfilPage /> : <Vista id={clave} />)}
       />
 
