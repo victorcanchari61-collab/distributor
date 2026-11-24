@@ -9,6 +9,8 @@ import {
   LockKeyhole,
   LogOut,
   PackageCheck,
+  PanelBottom,
+  PanelLeft,
   PackageX,
   UserRound,
 } from 'lucide-react'
@@ -18,6 +20,7 @@ import type { AlertaResponse } from '../../lib/alertasApi'
 import { alertasLeidas, marcarLeida, marcarTodasLeidas } from '../../lib/alertasLeidas'
 import { useRealtime } from '../../lib/realtime'
 import { resolveNav } from './navigation'
+import type { FormatoNavegacion } from './formatoNavegacion'
 import { urlImagen } from '../../features/tms/flotaApi'
 
 /** Como se lee la accion pedida, sin la pantalla al lado. */
@@ -262,14 +265,22 @@ export interface MenuCuentaProps {
   foto: string | null
   onPerfil: () => void
   onLogout: () => void
+  /** Cómo navega esta persona: menú lateral o barra de abajo. Sin esto no se ofrece elegir. */
+  formato?: FormatoNavegacion
+  onFormato?: (formato: FormatoNavegacion) => void
 }
+
+const FORMATOS: { id: FormatoNavegacion; etiqueta: string; icono: typeof PanelLeft }[] = [
+  { id: 'lateral', etiqueta: 'Menú lateral', icono: PanelLeft },
+  { id: 'barra', etiqueta: 'Barra inferior', icono: PanelBottom },
+]
 
 /**
  * La cuenta del usuario: una pastilla blanca con la foto, el nombre y el
  * correo. Al tocarla se abre Mi perfil y Cerrar sesión. En el celular solo va
  * la foto: el nombre no entra junto al título.
  */
-export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout }: MenuCuentaProps) {
+export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout, formato, onFormato }: MenuCuentaProps) {
   const [abierto, setAbierto] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
   const cerrar = useCallback(() => setAbierto(false), [])
@@ -317,6 +328,28 @@ export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout }: MenuCuen
             <UserRound size={16} className="text-ink-soft" />
             Mi perfil
           </button>
+          {formato && onFormato && (
+            <div className="border-y border-line py-1">
+              <p className="px-4 pt-1.5 pb-1 text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Navegación</p>
+              {FORMATOS.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={formato === f.id}
+                  onClick={() => elegir(() => onFormato(f.id))}
+                  className={cn(
+                    'flex w-full cursor-pointer items-center gap-2 px-4 py-2 text-left text-sm hover:bg-surface-alt',
+                    formato === f.id ? 'font-semibold text-[rgb(var(--sys-ink-rgb))]' : 'text-ink',
+                  )}
+                >
+                  <f.icono size={16} className={formato === f.id ? 'text-[rgb(var(--sys-rgb))]' : 'text-ink-soft'} />
+                  <span className="flex-1">{f.etiqueta}</span>
+                  {formato === f.id && <Check size={15} className="text-[rgb(var(--sys-rgb))]" />}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             type="button"
             onClick={() => elegir(onLogout)}

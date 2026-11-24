@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { FaTableColumns } from 'react-icons/fa6'
 import { cn } from './cn'
-import { claseCampo } from './Input'
+import { claseBuscador, claseCampo } from './Input'
 import { useDismiss } from './useDismiss'
 import { instanteMs } from '../../lib/fechas'
 import { FiltersButton } from './FiltersButton'
@@ -673,8 +673,9 @@ export function SysDataTable<T>({
       // MIDE: con una reserva fija, un pie más alto que ella dejaba la página unos píxeles más alta que la ventana y
       // salía la barra de desplazamiento de la página. El fondo del contenido es el del último bloque de <main> (main
       // se estira hasta el pie de la ventana; sus hijos no) más su margen inferior.
+      // Con pestañas de trabajo, <main> tiene un panel por pestaña (los ocultos miden 0): se mira el de esta tabla.
       const main = el.closest('main')
-      const ultimo = main?.lastElementChild
+      const ultimo = (el.closest('[role="tabpanel"]') ?? main)?.lastElementChild
       const debajo =
         main && ultimo
           ? ultimo.getBoundingClientRect().bottom -
@@ -918,7 +919,7 @@ export function SysDataTable<T>({
                 placeholder={searchPlaceholder}
                 className={cn(
                   'w-full rounded-lg py-2 pr-8 pl-9 text-sm text-zinc-900 outline-none placeholder:text-zinc-400',
-                  claseCampo(false, 'propio'),
+                  claseBuscador('propio'),
                 )}
               />
               {search && (
@@ -1548,7 +1549,7 @@ function ColumnSearchPopover<T>({
           placeholder={`Buscar ${column.label.toLowerCase()}`}
           className={cn(
             'w-full rounded-md py-1.5 pr-6 pl-7 text-[12px] font-normal tracking-normal normal-case text-zinc-900 outline-none',
-            claseCampo(false, 'propio'),
+            claseBuscador('propio'),
           )}
         />
         {value && (

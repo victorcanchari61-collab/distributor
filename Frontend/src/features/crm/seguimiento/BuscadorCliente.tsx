@@ -60,6 +60,7 @@ export function BuscadorCliente({
     <div ref={ref} className="relative w-full sm:w-96">
       <Input
         size="md"
+        buscador
         icon={<Search size={16} />}
         placeholder={actual ? actual.nombre : 'Buscar cliente por nombre, documento o código...'}
         value={texto}

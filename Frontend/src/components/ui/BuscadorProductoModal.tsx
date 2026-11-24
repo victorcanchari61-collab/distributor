@@ -4,7 +4,7 @@ import { Package, RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
 import { cn } from './cn'
 import { Button } from './Button'
 import { Desplegable } from './Desplegable'
-import { Input, claseCampo } from './Input'
+import { Input, claseBuscador } from './Input'
 import { Modal } from './Modal'
 import { opcionesPresentacion, presentacionInicial } from '../../lib/presentaciones'
 import type { UsoPresentacion } from '../../lib/presentaciones'
@@ -236,7 +236,7 @@ export function BuscadorProductoModal({
                 placeholder="Nombre, código, marca..."
                 className={cn(
                   'h-[var(--height-field-md)] w-full rounded-field pr-3 pl-9 text-sm text-ink outline-none placeholder:text-ink-soft',
-                  claseCampo(false, 'propio'),
+                  claseBuscador('propio'),
                 )}
               />
             </div>

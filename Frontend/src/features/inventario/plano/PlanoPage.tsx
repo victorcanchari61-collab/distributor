@@ -816,6 +816,7 @@ export function PlanoPage() {
 
           <div className="relative">
             <Input
+              buscador
               icon={<Search size={16} />}
               placeholder="Buscar producto: arroz, 7526..."
               value={busqueda}

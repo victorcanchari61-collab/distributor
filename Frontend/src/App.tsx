@@ -1,8 +1,10 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ComponentType } from 'react'
-import { ShieldOff } from 'lucide-react'
-import { Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { DashboardLayout, navIdFromPath, navPath, puedeAbrir, resolveNav } from './components/layout'
+import { Home, LayoutDashboard, ShieldOff, UserRound } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { DashboardLayout, navIdFromPath, navPath, puedeAbrir, resolveNav, useFormatoNavegacion } from './components/layout'
+import { BarraPestanas, ContenidoPestanas, usePestanasTrabajo } from './components/pestanas'
+import type { OpcionMenu, PestanaTrabajo } from './components/pestanas'
 import { LoginPage } from './features/auth/LoginPage'
 import type { UsuarioResponse } from './features/auth/authApi'
 import { SolicitudPermisoModal } from './features/config/SolicitudPermisoModal'
@@ -142,34 +144,120 @@ function App() {
     )
   }
 
-  const active = navIdFromPath(location.pathname)
-
   return (
     // Se remonta al cambiar de usuario: si no, quien entrara despues heredaria
     // los permisos que quedaron cargados de la sesion anterior.
     <PermisosProvider key={usuario.id}>
+      <Panel
+        usuario={usuario}
+        onSalir={() => {
+          clearSession()
+          setUsuario(null)
+          navigate('/', { replace: true })
+        }}
+      />
+    </PermisosProvider>
+  )
+}
+
+/** La pestaña de Mi perfil: no es del menú (es de todos), pero se abre como cualquier otra. */
+const PERFIL = 'perfil'
+
+/** La clave de pestaña de una ruta: "" es Inicio, "perfil" Mi perfil, y el resto el id del menú ("inv.plano"). */
+const claveDeRuta = (pathname: string) =>
+  pathname.replace(/^\/+|\/+$/g, '') === PERFIL ? PERFIL : navIdFromPath(pathname)
+const rutaDeClave = (clave: string) => (clave === '' ? '/' : clave === PERFIL ? '/perfil' : navPath(clave))
+
+/** Lo que puede ser una pestaña: Inicio, Mi perfil y las vistas del menú. Fuera del componente: tiene que ser estable. */
+const esClaveValida = (clave: string) => clave === '' || clave === PERFIL || resolveNav(clave).item !== undefined
+
+/** Cuántas pestañas puede tener abiertas una persona a la vez. */
+const MAXIMO_PESTANAS = 12
+
+/**
+ * El panel de quien entró: el menú, las pestañas de trabajo y lo que muestra cada una.
+ *
+ * Las vistas no se pintan por ruta sino en pestañas, como en un navegador: entrar a una vista desde el menú la abre
+ * en una pestaña nueva (o enfoca la que ya la tiene) y cada pestaña conserva lo suyo al ir y volver. La URL solo dice
+ * cuál está a la vista, así un enlace compartido sigue abriendo la pantalla correcta.
+ */
+function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => void }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Las pestañas abiertas y el formato del menú se recuerdan por usuario: no se mezclan al cambiar de cuenta.
+  const pestanas = usePestanasTrabajo({
+    claveRuta: claveDeRuta(location.pathname),
+    onNavegar: (clave) => navigate(rutaDeClave(clave), { replace: true }),
+    claveGuardado: `distribuidora.pestanas.${usuario.id}`,
+    esValida: esClaveValida,
+    maximo: MAXIMO_PESTANAS,
+  })
+  const [formato, setFormato] = useFormatoNavegacion(`distribuidora.navegacion.${usuario.id}`)
+
+  // Entrar a una vista desde el menú abre su pestaña (o enfoca la que ya la tiene). Con el máximo alcanzado no cabe
+  // otra: la vista reemplaza a la de la pestaña activa.
+  const abrir = (clave: string) => {
+    if (pestanas.claves.includes(clave) || pestanas.caben) pestanas.abrir(clave)
+    else navigate(rutaDeClave(clave))
+  }
+
+  const cerrable = pestanas.claves.length > 1
+  const lista: PestanaTrabajo[] = pestanas.claves.map((clave) => {
+    if (clave === '') return { clave, etiqueta: 'Inicio', icono: Home, sys: 'brand', cerrable }
+    if (clave === PERFIL) return { clave, etiqueta: 'Mi perfil', icono: UserRound, sys: 'brand', cerrable }
+    const { group, item } = resolveNav(clave)
+    return {
+      clave,
+      etiqueta: item?.label ?? clave,
+      titulo: group ? `${group.label} › ${item?.label ?? ''}` : item?.label,
+      icono: item?.icon ?? LayoutDashboard,
+      sys: group?.sys ?? 'brand',
+      cerrable,
+    }
+  })
+
+  // Clic derecho sobre una pestaña.
+  const opcionesDe = (clave: string): OpcionMenu[] => {
+    const en = pestanas.claves.indexOf(clave)
+    return [
+      { etiqueta: 'Cerrar pestaña', onElegir: () => pestanas.cerrar(clave), desactivada: !cerrable },
+      { etiqueta: 'Cerrar las demás', onElegir: () => pestanas.cerrarOtras(clave), desactivada: !cerrable },
+      {
+        etiqueta: 'Cerrar las de la derecha',
+        onElegir: () => pestanas.cerrarDerecha(clave),
+        desactivada: en === pestanas.claves.length - 1,
+      },
+    ]
+  }
+
+  return (
     <DashboardLayout
-      active={active}
-      onSelect={(id) => navigate(navPath(id))}
+      active={pestanas.activa}
+      onSelect={abrir}
       userName={usuario.nombre}
       userEmail={usuario.email}
       userFoto={usuario.foto}
-      onPerfil={() => navigate('/perfil')}
-      onLogout={() => {
-        clearSession()
-        setUsuario(null)
-        navigate('/', { replace: true })
-      }}
+      onPerfil={() => abrir(PERFIL)}
+      onLogout={onSalir}
+      formato={formato}
+      onFormato={setFormato}
+      pestanas={
+        <BarraPestanas
+          pestanas={lista}
+          activa={pestanas.activa}
+          onElegir={(clave) => navigate(rutaDeClave(clave), { replace: true })}
+          onCerrar={pestanas.cerrar}
+          opcionesDe={opcionesDe}
+        />
+      }
     >
-      <Suspense fallback={<Cargando />}>
-      <Routes>
-        <Route path="/" element={<Inicio />} />
-        {/* Ruta propia y fuera del filtro de permisos: es de todos, no de un modulo. */}
-        <Route path="/perfil" element={<MiPerfilPage />} />
-        <Route path="/:modulo/:vista" element={<Vista />} />
-        <Route path="*" element={<Inicio />} />
-      </Routes>
-      </Suspense>
+      <ContenidoPestanas
+        claves={pestanas.claves}
+        activa={pestanas.activa}
+        cargando={<Cargando />}
+        pintar={(clave) => (clave === '' ? <Inicio /> : clave === PERFIL ? <MiPerfilPage /> : <Vista id={clave} />)}
+      />
 
       {/*
         Se monta una vez, fuera de las vistas: cualquier 403 del filtro de
@@ -178,14 +266,11 @@ function App() {
       */}
       <SolicitudPermisoModal />
     </DashboardLayout>
-    </PermisosProvider>
   )
 }
 
-/** Resuelve la vista que corresponde a la ruta actual. */
-function Vista() {
-  const { pathname } = useLocation()
-  const id = navIdFromPath(pathname)
+/** La vista de una pestaña. */
+function Vista({ id }: { id: string }) {
   const { puedeVer, cargando } = usePermisos()
 
   // El menu ya esconde lo que no se puede abrir, pero la URL se escribe a mano

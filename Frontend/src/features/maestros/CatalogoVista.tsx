@@ -76,6 +76,7 @@ export function CatalogoVista({ datos, cargando, error }: CatalogoVistaProps) {
       <div className="-mx-1 space-y-3 px-1 py-2 sm:sticky sm:top-0 sm:z-10 sm:bg-[var(--color-surface-alt,#f8fafc)]/90 sm:backdrop-blur">
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input
+            buscador
             icon={<Search className="size-4" />}
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}

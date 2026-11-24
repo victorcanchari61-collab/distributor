@@ -168,9 +168,11 @@ export function PlanoLienzo({
     if (!el) return
     const medir = () => {
       const ancho = el.clientWidth - 6
-      // Debajo quedan: el borde del plano (6), el relleno y borde del recuadro (13), el margen de la página (24) y,
-      // si va, la leyenda (30).
-      const libreAlto = window.innerHeight - (el.getBoundingClientRect().top + window.scrollY) - 46 - (leyenda ? 30 : 0)
+      // Debajo quedan: el borde del plano (6), el relleno y borde del recuadro (13), el margen de abajo de la página
+      // (se mide: con la barra de navegación abajo es más alto) y, si va, la leyenda (30).
+      const main = el.closest('main')
+      const margen = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 24
+      const libreAlto = window.innerHeight - (el.getBoundingClientRect().top + window.scrollY) - 22 - margen - (leyenda ? 30 : 0)
       const porAncho = ancho / columnas
       const porAlto = libreAlto > 200 ? libreAlto / filas : porAncho
       setCelda(Math.max(14, Math.floor(Math.min(porAncho, porAlto))))

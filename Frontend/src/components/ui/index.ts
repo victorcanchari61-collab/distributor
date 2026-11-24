@@ -1,6 +1,6 @@
 export { Button } from './Button'
 export type { ButtonProps } from './Button'
-export { Input, claseCampo } from './Input'
+export { Input, claseBuscador, claseCampo } from './Input'
 export type { InputProps } from './Input'
 export { Checkbox } from './Checkbox'
 export type { CheckboxProps } from './Checkbox'

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from './cn'
-import { FIELD_HEIGHT, claseCampo } from './Input'
+import { FIELD_HEIGHT, claseBuscador, claseCampo } from './Input'
 import type { FieldSize } from './Input'
 
 export interface ItemLista {
@@ -285,7 +285,7 @@ export function ListaDesplegable({
                     }
                   }}
                   placeholder="Buscar..."
-                  className={cn('w-full rounded-field py-1.5 pr-7 pl-7 text-[13px] text-ink outline-none', claseCampo(false, 'propio'))}
+                  className={cn('w-full rounded-field py-1.5 pr-7 pl-7 text-[13px] text-ink outline-none', claseBuscador('propio'))}
                 />
                 {filtro && (
                   <button

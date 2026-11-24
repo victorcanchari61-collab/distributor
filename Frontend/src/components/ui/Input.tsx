@@ -44,7 +44,20 @@ export const claseCampo = (error = false, foco: 'hijo' | 'propio' = 'hijo') =>
         : 'border-transparent focus:border-[rgb(var(--sys-rgb)/0.5)]',
   )
 
+/**
+ * El aspecto de los BUSCADORES (la barra de búsqueda de una tabla, buscar producto, buscar cliente...): blancos y con
+ * el borde del color del módulo siempre a la vista, sin esperar el cursor. Así se distinguen de un campo de dato: un
+ * buscador se usa a cada rato y tiene que encontrarse de un vistazo. Con el foco, el borde toma el color entero.
+ */
+export const claseBuscador = (foco: 'hijo' | 'propio' = 'hijo') =>
+  cn(
+    'border bg-surface border-[rgb(var(--sys-rgb)/0.55)]',
+    foco === 'hijo' ? 'focus-within:border-[rgb(var(--sys-rgb))]' : 'focus:border-[rgb(var(--sys-rgb))]',
+  )
+
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  /** Es un buscador: blanco y con el borde del color del módulo siempre a la vista (ver claseBuscador). */
+  buscador?: boolean
   label?: string
   /** Contenido a la derecha de la etiqueta (por ejemplo un enlace de ayuda). */
   hint?: ReactNode
@@ -64,6 +77,7 @@ export function Input({
   icon,
   revealable = false,
   optional = false,
+  buscador = false,
   size = 'md',
   type = 'text',
   id,
@@ -95,7 +109,13 @@ export function Input({
         Fondo de campo (ver claseCampo). Sin anillo ni transicion, que llamaban la atencion mas que el propio dato.
         El borde siempre ocupa 1px (transparente si no hay foco), asi que el campo no cambia de tamano.
       */}
-      <div className={cn('flex items-center gap-2 rounded-field px-3', FIELD_HEIGHT[size], claseCampo(Boolean(error)))}>
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-field px-3',
+          FIELD_HEIGHT[size],
+          buscador && !error ? claseBuscador() : claseCampo(Boolean(error)),
+        )}
+      >
         {icon && <span className="shrink-0 text-[rgb(var(--sys-rgb))]">{icon}</span>}
         <input
           id={inputId}
