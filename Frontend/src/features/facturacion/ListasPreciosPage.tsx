@@ -838,12 +838,6 @@ export function ListasPreciosPage() {
               ? 'Crea una lista de precios para empezar.'
               : 'Esta lista todavía no tiene precios.'
         }
-        note={
-          <>
-            <span className="font-semibold">Equivale a</span> muestra el precio llevado a la unidad
-            base. Sirve para ver cuánto ganas vendiendo suelto frente a vender por bulto.
-          </>
-        }
         rowActions={(row) => (
           <>
             <RowAction

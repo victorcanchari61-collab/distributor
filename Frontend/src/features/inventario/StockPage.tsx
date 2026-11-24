@@ -491,12 +491,6 @@ export function StockPage() {
               ? `${almacenActivo.nombre} todavía no tiene stock.`
               : 'No hay productos que controlen stock.'
         }
-        note={
-          <>
-            El costo real lo fija cada entrada; para moverlo, usa{' '}
-            <span className="font-semibold">Ajustes de inventario</span>.
-          </>
-        }
       />
     </PestanasVista>
   )
