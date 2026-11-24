@@ -1,8 +1,11 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ComponentType } from 'react'
 import { Home, LayoutDashboard, ShieldOff, UserRound } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { DashboardLayout, navIdFromPath, navPath, puedeAbrir, resolveNav, useFormatoNavegacion } from './components/layout'
+import { AccesoRapidoContexto } from './components/layout/AccesoRapidoContexto'
+import { pulsarAccesoRapido } from './components/layout/accesosRapidos'
+import type { AccesoRapido } from './components/layout/accesosRapidos'
 import { BarraPestanas, ContenidoPestanas, usePestanasTrabajo } from './components/pestanas'
 import type { OpcionMenu, PestanaTrabajo } from './components/pestanas'
 import { LoginPage } from './features/auth/LoginPage'
@@ -171,6 +174,9 @@ const rutaDeClave = (clave: string) => (clave === '' ? '/' : clave === PERFIL ? 
 /** Lo que puede ser una pestaña: Inicio, Mi perfil y las vistas del menú. Fuera del componente: tiene que ser estable. */
 const esClaveValida = (clave: string) => clave === '' || clave === PERFIL || resolveNav(clave).item !== undefined
 
+/** Cuántas vistas sin pestaña se guardan montadas en el fondo para los accesos rápidos (las más recientes). */
+const MAXIMO_EN_FONDO = 4
+
 /** Cuántas pestañas puede tener abiertas una persona a la vez. */
 const MAXIMO_PESTANAS = 12
 
@@ -200,6 +206,21 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
   const abrir = (clave: string) => {
     if (pestanas.claves.includes(clave) || pestanas.caben) pestanas.abrir(clave)
     else navigate(rutaDeClave(clave))
+  }
+
+  // Accesos rápidos del menú (Nuevo cliente, Importar…): el modal sale encima de la vista en la que se está, sin
+  // cambiar de pestaña. Si la vista del botón no está abierta, se monta oculta en el fondo para poder pulsarlo; solo se
+  // va a ella si el botón no abre un modal sino que cambia la propia vista (un formulario de página completa).
+  const [enFondo, setEnFondo] = useState<string[]>([])
+  const abrirVista = useRef(abrir)
+  useEffect(() => {
+    abrirVista.current = abrir
+  })
+  const usarAcceso = (vista: string, acceso: AccesoRapido) => {
+    if (!pestanas.claves.includes(vista)) {
+      setEnFondo((f) => [...f.filter((c) => c !== vista), vista].slice(-MAXIMO_EN_FONDO))
+    }
+    pulsarAccesoRapido(vista, acceso, () => abrirVista.current(vista))
   }
 
   const cerrable = pestanas.claves.length > 1
@@ -232,6 +253,7 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
   }
 
   return (
+    <AccesoRapidoContexto.Provider value={usarAcceso}>
     <DashboardLayout
       active={pestanas.activa}
       onSelect={abrir}
@@ -256,6 +278,7 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
         claves={pestanas.claves}
         activa={pestanas.activa}
         cargando={<Cargando />}
+        enFondo={enFondo}
         pintar={(clave) => (clave === '' ? <Inicio /> : clave === PERFIL ? <MiPerfilPage /> : <Vista id={clave} />)}
       />
 
@@ -266,6 +289,7 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
       */}
       <SolicitudPermisoModal />
     </DashboardLayout>
+    </AccesoRapidoContexto.Provider>
   )
 }
 

@@ -60,6 +60,8 @@ export function Tabs({ items, active, onChange, className }: TabsProps) {
               role="tab"
               type="button"
               aria-selected={activa}
+              // Los accesos rápidos del menú la buscan por su nombre para abrirla antes de pulsar un botón suyo.
+              data-pestana={item.label}
               title={texto !== item.label ? item.label : undefined}
               onClick={() => onChange(item.id)}
               className={cn(

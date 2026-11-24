@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowUpRight, ChevronRight, Plus } from 'lucide-react'
+import { ArrowUpRight, ChevronRight, Download, Plus, Upload } from 'lucide-react'
 import { usePermisos } from '../../lib/permisos'
 import { cn } from '../ui'
+import { AccesoRapidoContexto } from './AccesoRapidoContexto'
 import { ACCESOS_RAPIDOS, pulsarAccesoRapido } from './accesosRapidos'
 import type { AccesoRapido } from './accesosRapidos'
 import type { NavGroup, NavItem } from './navigation'
@@ -20,7 +21,7 @@ const GRACIA_CIERRE = 180
  * recortado. Entra con una animación corta desde el propio botón.
  *
  * Al pasar el mouse por una vista que tiene botones en su cabecera (Nueva boleta, Nuevo pedido…), al lado sale otro
- * panel con ellos: elegir uno abre la vista y pulsa ese botón (ver accesosRapidos.ts).
+ * panel con ellos: elegir uno pulsa ese botón y su modal sale encima de la vista actual (ver accesosRapidos.ts).
  */
 export function SubmenuFlotante({
   group,
@@ -44,6 +45,7 @@ export function SubmenuFlotante({
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
   const arriba = colocacion === 'arriba'
   const { puede } = usePermisos()
+  const usarAcceso = useContext(AccesoRapidoContexto)
 
   // La vista bajo el mouse que muestra sus accesos, y el renglón del que salen (para colocar el panel a su altura).
   const [conAccesos, setConAccesos] = useState<{ item: NavItem; fila: DOMRect; submenu: DOMRect } | null>(null)
@@ -57,7 +59,7 @@ export function SubmenuFlotante({
 
   /** Los accesos de una vista que esta persona puede usar. */
   const accesosDe = (id: string): AccesoRapido[] =>
-    (ACCESOS_RAPIDOS[id] ?? []).filter((a) => !a.permiso || puede(id, a.permiso))
+    (ACCESOS_RAPIDOS[id] ?? []).filter((a) => !a.permiso || puede(a.submodulo ?? id, a.permiso))
 
   useEffect(() => {
     const colocar = () => {
@@ -196,8 +198,14 @@ export function SubmenuFlotante({
           onEntrar={seguirAbierto}
           onSalir={cerrarLuego}
           onElegir={(acceso) => {
-            onSelect(conAccesos.item.id)
-            pulsarAccesoRapido(conAccesos.item.id, acceso.etiqueta)
+            const vista = conAccesos.item.id
+            onCerrar()
+            // Con el panel de pestañas, el modal sale sobre la vista actual; sin él, se abre la vista y se pulsa ahí.
+            if (usarAcceso) usarAcceso(vista, acceso)
+            else {
+              onSelect(vista)
+              pulsarAccesoRapido(vista, acceso, () => {})
+            }
           }}
         />
       )}
@@ -206,9 +214,20 @@ export function SubmenuFlotante({
   )
 }
 
+/** El ícono de un acceso, según lo que hace el botón. */
+function IconoAcceso({ etiqueta }: { etiqueta: string }) {
+  const props = { size: 12, strokeWidth: 2.5 }
+  if (/^(Nuev|Agregar|Asignar|Armar|Crear)/.test(etiqueta)) return <Plus {...props} />
+  if (/^Importar/.test(etiqueta)) return <Upload {...props} />
+  if (/^(Exportar|Excel|PDF|Descargar|Reporte)/.test(etiqueta)) return <Download {...props} />
+  return <ArrowUpRight {...props} />
+}
+
 /**
  * El panel con los botones de una vista, pegado al submenú a la altura del renglón de esa vista. Va a la derecha y,
  * si no entra (la barra de abajo deja el submenú cerca del borde), a la izquierda.
+ *
+ * Si la vista tiene pestañas internas, los botones van agrupados bajo el nombre de su pestaña.
  */
 function PanelAccesos({
   refPanel,
@@ -231,11 +250,18 @@ function PanelAccesos({
   onSalir: () => void
   onElegir: (acceso: AccesoRapido) => void
 }) {
-  const borde = submenu
-  const aLaDerecha = borde.right + 6 + ANCHO_ACCESOS <= window.innerWidth - 8
-  const left = aLaDerecha ? borde.right + 6 : Math.max(8, borde.left - 6 - ANCHO_ACCESOS)
+  // Agrupados por pestaña, en el orden en que aparecen. Los de la vista sin pestañas van en un grupo sin nombre.
+  const grupos: { pestana?: string; accesos: AccesoRapido[] }[] = []
+  for (const acceso of accesos) {
+    const grupo = grupos.find((g) => g.pestana === acceso.pestana)
+    if (grupo) grupo.accesos.push(acceso)
+    else grupos.push({ pestana: acceso.pestana, accesos: [acceso] })
+  }
+
+  const aLaDerecha = submenu.right + 6 + ANCHO_ACCESOS <= window.innerWidth - 8
+  const left = aLaDerecha ? submenu.right + 6 : Math.max(8, submenu.left - 6 - ANCHO_ACCESOS)
   // Arriba del todo va el título (unos 30px): se sube para que el primer botón quede a la altura del renglón.
-  const alto = 40 + accesos.length * 34
+  const alto = Math.min(40 + accesos.length * 34 + grupos.filter((g) => g.pestana).length * 26, window.innerHeight * 0.7)
   const top = Math.max(8, Math.min(fila.top - 34, window.innerHeight - alto - 8))
 
   return (
@@ -248,7 +274,7 @@ function PanelAccesos({
       onMouseEnter={onEntrar}
       onMouseLeave={onSalir}
       className={cn(
-        'fixed z-50 w-52 rounded-panel border border-line bg-white p-1.5 shadow-panel',
+        'fixed z-50 max-h-[70vh] w-52 overflow-y-auto rounded-panel border border-line bg-white p-1.5 shadow-panel',
         'transition-[opacity,translate] duration-100 starting:opacity-0',
         aLaDerecha ? 'starting:-translate-x-1' : 'starting:translate-x-1',
       )}
@@ -256,26 +282,29 @@ function PanelAccesos({
       <p className="truncate px-2.5 pt-1 pb-2 text-[11px] font-semibold tracking-wider text-[rgb(var(--sys-ink-rgb))] uppercase">
         {item.label}
       </p>
-      {accesos.map((acceso) => (
-        <button
-          key={acceso.etiqueta}
-          type="button"
-          role="menuitem"
-          onClick={() => onElegir(acceso)}
-          className={cn(
-            'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-ink-muted transition-colors',
-            'hover:bg-[rgb(var(--sys-rgb)/0.1)] hover:text-[rgb(var(--sys-ink-rgb))]',
+      {grupos.map((grupo, i) => (
+        <div key={grupo.pestana ?? ''} className={cn(i > 0 && 'mt-1 border-t border-line pt-1')}>
+          {grupo.pestana && (
+            <p className="truncate px-2.5 pt-1 pb-0.5 text-[11px] font-medium text-ink-soft">{grupo.pestana}</p>
           )}
-        >
-          <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-[rgb(var(--sys-rgb)/0.12)] text-[rgb(var(--sys-rgb))]">
-            {/^(Nuev|Agregar|Asignar|Armar)/.test(acceso.etiqueta) ? (
-              <Plus size={12} strokeWidth={2.5} />
-            ) : (
-              <ArrowUpRight size={12} strokeWidth={2.5} />
-            )}
-          </span>
-          <span className="flex-1 truncate text-left">{acceso.etiqueta}</span>
-        </button>
+          {grupo.accesos.map((acceso) => (
+            <button
+              key={acceso.texto ?? acceso.etiqueta}
+              type="button"
+              role="menuitem"
+              onClick={() => onElegir(acceso)}
+              className={cn(
+                'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] text-ink-muted transition-colors',
+                'hover:bg-[rgb(var(--sys-rgb)/0.1)] hover:text-[rgb(var(--sys-ink-rgb))]',
+              )}
+            >
+              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-md bg-[rgb(var(--sys-rgb)/0.12)] text-[rgb(var(--sys-rgb))]">
+                <IconoAcceso etiqueta={acceso.texto ?? acceso.etiqueta} />
+              </span>
+              <span className="flex-1 truncate text-left">{acceso.texto ?? acceso.etiqueta}</span>
+            </button>
+          ))}
+        </div>
       ))}
     </div>
   )

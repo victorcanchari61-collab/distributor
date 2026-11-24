@@ -37,17 +37,31 @@ export function ContenidoPestanas({
   activa,
   pintar,
   cargando,
+  enFondo = [],
 }: {
   claves: string[]
   activa: string
   pintar: (clave: string) => ReactNode
   /** Lo que se ve mientras llega el código de una pantalla. */
   cargando: ReactNode
+  /**
+   * Vistas montadas sin pestaña, siempre ocultas: un acceso rápido del menú pulsa ahí un botón y su modal sale encima
+   * de la vista que se está usando (los modales se pintan fuera del panel). Si después se abre como pestaña, es la
+   * misma vista montada: no se vuelve a cargar.
+   */
+  enFondo?: string[]
 }) {
+  const montadas = [...claves, ...enFondo.filter((c) => !claves.includes(c))]
   return (
     <>
-      {claves.map((clave) => (
-        <div key={clave} role="tabpanel" id={idPanel(clave)} aria-labelledby={idPestana(clave)} hidden={clave !== activa}>
+      {montadas.map((clave) => (
+        <div
+          key={clave}
+          role="tabpanel"
+          id={idPanel(clave)}
+          aria-labelledby={claves.includes(clave) ? idPestana(clave) : undefined}
+          hidden={clave !== activa}
+        >
           <ErrorDePestana>
             <Suspense fallback={cargando}>{pintar(clave)}</Suspense>
           </ErrorDePestana>
