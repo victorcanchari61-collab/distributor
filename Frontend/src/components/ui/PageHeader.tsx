@@ -69,6 +69,8 @@ export function PageHeader({
 
         {actions && (
           <div
+            // Los accesos rápidos del menú buscan aquí el botón que tienen que pulsar (ver accesosRapidos.ts).
+            data-acciones-cabecera=""
             className={cn(
               'order-3 sm:order-2',
               '-mx-4 flex w-full shrink-0 snap-x snap-mandatory items-center gap-2 overflow-x-auto px-4 pb-1',
