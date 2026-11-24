@@ -144,6 +144,8 @@ export function BarraPestanas({
     if (e.deltaY !== 0 && e.deltaX === 0) e.currentTarget.scrollLeft += e.deltaY
   }
 
+  // Pasa a la pestaña de la posición `a` dando la vuelta en los extremos, y le pone el foco cuando React ya la
+  // marcó como activa (por eso el requestAnimationFrame).
   const mover = (a: number) => {
     const siguiente = pestanas[(a + pestanas.length) % pestanas.length]
     onElegir(siguiente.clave)
