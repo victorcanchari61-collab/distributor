@@ -125,8 +125,12 @@ export function DashboardLayout({
           </div>
         </header>
 
-        {/* Con la barra de abajo, el contenido deja su lugar para que no lo tape. */}
-        <main className={cn('flex-1 px-4 pt-4 sm:px-6', barra ? 'pb-24' : 'pb-4 sm:pb-6')}>
+        {/*
+          Con la barra de abajo: en pantalla ancha la barra va centrada y el pie de la vista (la paginación) queda a su
+          misma altura, a los costados, como en el otro sistema; no hace falta dejarle todo su alto. En pantalla angosta
+          sí: ahí se taparían.
+        */}
+        <main className={cn('flex-1 px-4 pt-4 sm:px-6', barra ? 'pb-24 xl:pb-4' : 'pb-4 sm:pb-6')}>
           <CabeceraGlobalContext.Provider value={cabecera}>{children}</CabeceraGlobalContext.Provider>
         </main>
       </div>
