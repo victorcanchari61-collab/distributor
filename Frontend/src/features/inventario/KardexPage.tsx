@@ -324,6 +324,9 @@ export function KardexPage() {
           },
         }}
         cardIcon={BookOpen}
+        // 50 y no los 20 de la regla: es la lista más larga del sistema (una fila por línea de cada documento) y la
+        // vista no tiene tarjetas arriba, así que con 20 filas sobraba tabla y no había nada que desplazar.
+        pageSize={50}
         searchPlaceholder="Buscar por documento, motivo, producto..."
         empty={
           cargando
