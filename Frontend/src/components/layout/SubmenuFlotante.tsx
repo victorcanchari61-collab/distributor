@@ -30,8 +30,8 @@ export function SubmenuFlotante({
   active: string
   onSelect: (id: string) => void
   onCerrar: () => void
-  /** A la derecha del sider (por defecto) o encima del botón, para la barra inferior. */
-  colocacion?: 'derecha' | 'arriba'
+  /** A la derecha del sider (por defecto), encima de su botón o debajo, para las barras. */
+  colocacion?: 'derecha' | 'arriba' | 'abajo'
   /** De qué lado está el sider: el panel sale hacia el lado opuesto. */
   lado?: 'izquierda' | 'derecha'
 }) {
@@ -39,6 +39,7 @@ export function SubmenuFlotante({
   const [visible, setVisible] = useState(false)
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number } | null>(null)
   const arriba = colocacion === 'arriba'
+  const abajo = colocacion === 'abajo'
   const siderDerecha = lado === 'derecha'
   const accesos = useAccesosAlPasar({ onAbrirVista: onSelect, onElegido: onCerrar })
   const refAccesos = accesos.refPanel
@@ -47,13 +48,14 @@ export function SubmenuFlotante({
     const colocar = () => {
       const r = ancla.getBoundingClientRect()
 
-      if (arriba) {
+      if (arriba || abajo) {
         // Centrado sobre el botón, sin salirse de la pantalla.
         const centro = r.left + r.width / 2 - ANCHO / 2
-        setPos({
-          bottom: window.innerHeight - r.top + 8,
-          left: Math.min(Math.max(8, centro), window.innerWidth - ANCHO - 8),
-        })
+        const left = Math.min(Math.max(8, centro), window.innerWidth - ANCHO - 8)
+        const alto = 52 + group.items.length * 34
+
+        if (arriba) setPos({ bottom: window.innerHeight - r.top + 8, left })
+        else setPos({ top: Math.min(r.bottom + 8, Math.max(8, window.innerHeight - alto - 8)), left })
         return
       }
 
@@ -91,7 +93,7 @@ export function SubmenuFlotante({
       window.removeEventListener('resize', colocar)
       window.removeEventListener('scroll', colocar, true)
     }
-  }, [ancla, arriba, group.items.length, onCerrar, refAccesos, siderDerecha])
+  }, [ancla, arriba, abajo, group.items.length, onCerrar, refAccesos, siderDerecha])
 
   if (!pos) return null
 
@@ -104,15 +106,23 @@ export function SubmenuFlotante({
         onMouseLeave={accesos.salir}
         className={cn(
           'fixed z-50 w-56 rounded-panel border border-line bg-white p-1.5 shadow-panel',
-          arriba ? 'max-h-[70vh] origin-bottom overflow-y-auto' : siderDerecha ? 'origin-right' : 'origin-left',
+          arriba
+            ? 'max-h-[70vh] origin-bottom overflow-y-auto'
+            : abajo
+              ? 'max-h-[70vh] origin-top overflow-y-auto'
+              : siderDerecha
+                ? 'origin-right'
+                : 'origin-left',
           'transition-all duration-150',
           visible
             ? 'translate-x-0 translate-y-0 scale-100 opacity-100'
             : arriba
               ? 'translate-y-2 scale-95 opacity-0'
-              : siderDerecha
-                ? 'translate-x-2 scale-95 opacity-0'
-                : '-translate-x-2 scale-95 opacity-0',
+              : abajo
+                ? '-translate-y-2 scale-95 opacity-0'
+                : siderDerecha
+                  ? 'translate-x-2 scale-95 opacity-0'
+                  : '-translate-x-2 scale-95 opacity-0',
         )}
       >
         <p className="px-2.5 pt-1 pb-2 text-[11px] font-semibold tracking-wider text-[rgb(var(--sys-ink-rgb))] uppercase">

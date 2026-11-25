@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Menu, PanelLeftOpen, PanelRightOpen } from 'lucide-react'
 import { CabeceraGlobalContext, cn } from '../ui'
 import type { CabeceraGlobal } from '../ui'
-import { BarraInferior } from './BarraInferior'
+import { BarraNavegacion } from './BarraNavegacion'
 import { CampanaAlertas, MenuCuenta } from './CuentaUsuario'
 import type { FormatoNavegacion, LadoNavegacion } from './formatoNavegacion'
 import { Sidebar } from './Sidebar'
@@ -19,7 +19,7 @@ export interface DashboardLayoutProps {
   onLogout: () => void
   /** La barra de pestañas de trabajo: va arriba, a la izquierda de la cuenta y la campana. */
   pestanas?: ReactNode
-  /** Menú lateral o barra fija abajo: lo elige cada persona en su menú de cuenta. */
+  /** Menú lateral, barra fija abajo o barra arriba: lo elige cada persona en su menú de cuenta. */
   formato: FormatoNavegacion
   onFormato: (formato: FormatoNavegacion) => void
   /** De qué lado va el menú lateral (solo aplica con `formato: 'lateral'`). */
@@ -33,7 +33,7 @@ const SIN_CABECERA_GLOBAL: CabeceraGlobal = {}
 
 /**
  * Estructura de la aplicación: arriba, una franja con las pestañas de trabajo, la cuenta y la campana; a la
- * izquierda el menú lateral (o, si la persona lo eligió, una barra fija abajo); y el área de trabajo gris.
+ * izquierda el menú lateral (o, si la persona lo eligió, una barra abajo o arriba); y el área de trabajo gris.
  *
  * El `data-sys` del contenedor lleva el color del sistema al que pertenece la vista abierta, así que cabeceras,
  * tablas y tarjetas se tiñen solas.
@@ -57,6 +57,8 @@ export function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false)
   const [oculto, setOculto] = useState(false)
   const barra = formato === 'barra'
+  const superior = formato === 'superior'
+  const lateral = formato === 'lateral'
   const derecha = lado === 'derecha'
 
   const { sys } = resolveNav(active)
@@ -64,9 +66,7 @@ export function DashboardLayout({
 
   return (
     <div data-sys={sys} className="min-h-screen bg-surface-alt">
-      {barra ? (
-        <BarraInferior active={active} onSelect={onSelect} />
-      ) : (
+      {lateral && (
         <Sidebar
           active={active}
           onSelect={(id) => {
@@ -84,12 +84,13 @@ export function DashboardLayout({
         />
       )}
 
+      {barra && <BarraNavegacion active={active} onSelect={onSelect} colocacion="inferior" />}
+
       <div
         className={cn(
           'flex min-h-screen flex-col transition-[padding] duration-200',
-          barra
-            ? ''
-            : derecha
+          lateral
+            ? derecha
               ? cn(
                   'lg:pl-0',
                   oculto ? 'lg:pr-0' : collapsed ? 'lg:pr-[72px]' : 'lg:pr-56',
@@ -97,23 +98,42 @@ export function DashboardLayout({
               : cn(
                   'lg:pr-0',
                   oculto ? 'lg:pl-0' : collapsed ? 'lg:pl-[72px]' : 'lg:pl-56',
-                ),
+                )
+            : '',
         )}
       >
         {/* La franja de arriba: las pestañas abiertas a la izquierda; la cuenta y la campana a la derecha. */}
-        <header className="sticky top-0 z-30 flex items-end gap-2 bg-slate-200/80 pt-1.5 pr-3 pl-1 backdrop-blur sm:pr-5">
-          {!barra && (
-            <div className="mb-1 flex shrink-0 items-center">
-              <button
-                type="button"
-                onClick={() => setMobileOpen(true)}
-                aria-label="Abrir menú"
-                className="cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-white lg:hidden"
-              >
-                <Menu size={20} />
-              </button>
-              {/* Solo con el sider oculto: es la única forma de recuperarlo. Sale del lado donde estaba. */}
-              {oculto && !derecha && (
+        <header className="sticky top-0 z-30 bg-slate-200/80 pt-1.5 pr-3 pl-1 backdrop-blur sm:pr-5">
+          <div className="flex items-end gap-2">
+            {lateral && (
+              <div className="mb-1 flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(true)}
+                  aria-label="Abrir menú"
+                  className="cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-white lg:hidden"
+                >
+                  <Menu size={20} />
+                </button>
+                {/* Solo con el sider oculto: es la única forma de recuperarlo. Sale del lado donde estaba. */}
+                {oculto && !derecha && (
+                  <button
+                    type="button"
+                    onClick={() => setOculto(false)}
+                    aria-label="Mostrar menú"
+                    title="Mostrar menú"
+                    className="hidden cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-white hover:text-ink lg:block"
+                  >
+                    <PanelLeftOpen size={20} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1">{pestanas}</div>
+
+            <div className="mb-1 flex shrink-0 items-center gap-2">
+              {lateral && oculto && derecha && (
                 <button
                   type="button"
                   onClick={() => setOculto(false)}
@@ -121,39 +141,30 @@ export function DashboardLayout({
                   title="Mostrar menú"
                   className="hidden cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-white hover:text-ink lg:block"
                 >
-                  <PanelLeftOpen size={20} />
+                  <PanelRightOpen size={20} />
                 </button>
               )}
+              <MenuCuenta
+                nombre={userName}
+                email={userEmail}
+                foto={userFoto}
+                onPerfil={onPerfil}
+                onLogout={onLogout}
+                formato={formato}
+                onFormato={onFormato}
+                lado={lado}
+                onLado={onLado}
+              />
+              <CampanaAlertas onNavigate={onSelect} />
+            </div>
+          </div>
+
+          {/* La navegación en barra arriba: una fila propia debajo de las pestañas. */}
+          {superior && (
+            <div className="mt-2 pb-2">
+              <BarraNavegacion active={active} onSelect={onSelect} colocacion="superior" />
             </div>
           )}
-
-          <div className="min-w-0 flex-1">{pestanas}</div>
-
-          <div className="mb-1 flex shrink-0 items-center gap-2">
-            {!barra && oculto && derecha && (
-              <button
-                type="button"
-                onClick={() => setOculto(false)}
-                aria-label="Mostrar menú"
-                title="Mostrar menú"
-                className="hidden cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-white hover:text-ink lg:block"
-              >
-                <PanelRightOpen size={20} />
-              </button>
-            )}
-            <MenuCuenta
-              nombre={userName}
-              email={userEmail}
-              foto={userFoto}
-              onPerfil={onPerfil}
-              onLogout={onLogout}
-              formato={formato}
-              onFormato={onFormato}
-              lado={lado}
-              onLado={onLado}
-            />
-            <CampanaAlertas onNavigate={onSelect} />
-          </div>
         </header>
 
         {/*

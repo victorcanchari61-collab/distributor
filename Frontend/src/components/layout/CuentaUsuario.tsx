@@ -12,6 +12,7 @@ import {
   PanelBottom,
   PanelLeft,
   PanelRight,
+  PanelTop,
   PackageX,
   UserRound,
 } from 'lucide-react'
@@ -277,6 +278,7 @@ export interface MenuCuentaProps {
 const FORMATOS: { id: FormatoNavegacion; etiqueta: string; icono: typeof PanelLeft }[] = [
   { id: 'lateral', etiqueta: 'Menú lateral', icono: PanelLeft },
   { id: 'barra', etiqueta: 'Barra inferior', icono: PanelBottom },
+  { id: 'superior', etiqueta: 'Barra superior', icono: PanelTop },
 ]
 
 const LADOS: { id: LadoNavegacion; etiqueta: string; icono: typeof PanelLeft }[] = [

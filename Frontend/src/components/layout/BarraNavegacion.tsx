@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronUp, Home } from 'lucide-react'
+import { ChevronDown, ChevronUp, Home } from 'lucide-react'
 import { cn } from '../ui'
 import { usePermisos } from '../../lib/permisos'
 import { NAV_GROUPS, puedeAbrir } from './navigation'
@@ -10,16 +10,29 @@ const ACTIVO =
   'bg-[rgb(var(--sys-rgb)/0.16)] text-[rgb(var(--sys-ink-rgb))] shadow-[inset_3px_0_0_rgb(var(--sys-rgb))]'
 const INACTIVO = 'text-ink-muted hover:bg-[rgb(var(--sys-rgb)/0.08)] hover:text-[rgb(var(--sys-ink-rgb))]'
 
+/** Dónde va la barra: fija abajo o dentro de la franja de arriba. */
+export type ColocacionBarra = 'inferior' | 'superior'
+
 /**
- * El otro formato de navegación: una barra fija abajo, con Inicio y un botón por módulo. Cada módulo abre hacia
- * arriba la lista de sus vistas. Lee los mismos grupos que el menú lateral, así los dos muestran siempre lo mismo.
+ * El otro formato de navegación: una barra con Inicio y un botón por módulo. Cada módulo abre la lista de sus vistas
+ * hacia arriba (barra inferior) o hacia abajo (barra superior). Lee los mismos grupos que el menú lateral, así los tres
+ * formatos muestran siempre lo mismo.
  *
- * Siempre a la vista: no se esconde ni se mueve. El módulo de la vista abierta muestra su nombre; los demás, solo el
- * ícono (con tantos módulos no entran todos con nombre) y su nombre al pasar el mouse.
+ * Abajo siempre está a la vista: no se esconde ni se mueve. El módulo de la vista abierta muestra su nombre; los demás,
+ * solo el ícono (con tantos módulos no entran todos con nombre) y su nombre al pasar el mouse.
  */
-export function BarraInferior({ active, onSelect }: { active: string; onSelect: (id: string) => void }) {
+export function BarraNavegacion({
+  active,
+  onSelect,
+  colocacion = 'inferior',
+}: {
+  active: string
+  onSelect: (id: string) => void
+  colocacion?: ColocacionBarra
+}) {
   const { puedeVer, cargando } = usePermisos()
   const [abierto, setAbierto] = useState<{ id: string; ancla: HTMLElement } | null>(null)
+  const superior = colocacion === 'superior'
 
   // Como en el menú lateral: solo lo que esta persona puede abrir, y sin módulos vacíos.
   const grupos = useMemo(() => {
@@ -32,8 +45,21 @@ export function BarraInferior({ active, onSelect }: { active: string; onSelect: 
   const grupoAbierto = grupos.find((g) => g.id === abierto?.id)
 
   return (
-    <nav aria-label="Menú principal" className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-3">
-      <div data-barra-inferior className="pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-line bg-white p-1.5 shadow-panel [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <nav
+      aria-label="Menú principal"
+      className={cn(
+        'pointer-events-none z-40 flex',
+        superior ? 'relative w-full justify-start' : 'fixed inset-x-0 bottom-0 justify-center px-3 pb-3',
+      )}
+    >
+      <div
+        // SysDataTable solo aparta la paginación de la barra fija de abajo.
+        data-barra-inferior={superior ? undefined : true}
+        className={cn(
+          'pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-line bg-white p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          superior ? 'shadow-sm' : 'shadow-panel',
+        )}
+      >
         <div data-sys="brand" className="shrink-0">
           <button
             type="button"
@@ -81,9 +107,12 @@ export function BarraInferior({ active, onSelect }: { active: string; onSelect: 
                     <span className="block pl-2">{grupo.label}</span>
                   </span>
                 </span>
-                {tieneActiva && (
-                  <ChevronUp size={14} className={cn('ml-1.5 transition-transform duration-200', !desplegado && 'rotate-180')} />
-                )}
+                {tieneActiva &&
+                  (superior ? (
+                    <ChevronDown size={14} className={cn('ml-1.5 transition-transform duration-200', desplegado && 'rotate-180')} />
+                  ) : (
+                    <ChevronUp size={14} className={cn('ml-1.5 transition-transform duration-200', !desplegado && 'rotate-180')} />
+                  ))}
               </button>
             </div>
           )
@@ -95,7 +124,7 @@ export function BarraInferior({ active, onSelect }: { active: string; onSelect: 
           group={grupoAbierto}
           ancla={abierto.ancla}
           active={active}
-          colocacion="arriba"
+          colocacion={superior ? 'abajo' : 'arriba'}
           onSelect={(id) => {
             setAbierto(null)
             onSelect(id)

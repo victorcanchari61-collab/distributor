@@ -1,14 +1,15 @@
 import { useCallback, useState } from 'react'
 
-/** Cómo se navega: el menú lateral o la barra fija de abajo. */
-export type FormatoNavegacion = 'lateral' | 'barra'
+/** Cómo se navega: el menú lateral, la barra fija de abajo o la barra de arriba. */
+export type FormatoNavegacion = 'lateral' | 'barra' | 'superior'
 
 /** De qué lado de la pantalla va el menú lateral. */
 export type LadoNavegacion = 'izquierda' | 'derecha'
 
 const leer = (clave: string): FormatoNavegacion => {
   try {
-    return localStorage.getItem(clave) === 'barra' ? 'barra' : 'lateral'
+    const guardado = localStorage.getItem(clave)
+    return guardado === 'barra' || guardado === 'superior' ? guardado : 'lateral'
   } catch {
     return 'lateral'
   }
