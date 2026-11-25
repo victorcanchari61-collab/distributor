@@ -796,14 +796,14 @@ export function SysDataTable<T>({
   const onBodyWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     const el = e.currentTarget
 
-    // Sin desbordamiento vertical no se pagina: tope y fondo coincidirian.
-    if (el.scrollHeight <= el.clientHeight + 4) return
-
     // Un salto por gesto: los eventos que siguen al primero se ignoran.
     if (performance.now() - ultimoSaltoRef.current < 500) return
 
-    const alFondo = el.scrollTop + el.clientHeight >= el.scrollHeight - 4
-    const alTope = el.scrollTop <= 4
+    // Si las filas entran sin desbordar (la última página, o una pantalla alta) se está en el tope y en el fondo a la
+    // vez: manda el sentido de la rueda. Antes ahí no se paginaba y desde la última página no se podía volver subiendo.
+    const sinDesborde = el.scrollHeight <= el.clientHeight + 4
+    const alFondo = sinDesborde || el.scrollTop + el.clientHeight >= el.scrollHeight - 4
+    const alTope = sinDesborde || el.scrollTop <= 4
 
     if (e.deltaY > 0 && alFondo && page < pageCount) saltarPagina(1)
     else if (e.deltaY < 0 && alTope && page > 1) saltarPagina(-1)
@@ -1147,16 +1147,17 @@ export function SysDataTable<T>({
         </div>
 
         {/*
-          solo las filas se desplazan: la barra queda por debajo de la cabecera. Con alto fijo la barra vertical está
-          siempre, aunque las filas entren (última página, pantalla grande): antes aparecía y desaparecía al cambiar de
-          página y la tabla se movía de ancho.
+          solo las filas se desplazan: la barra queda por debajo de la cabecera. Con alto fijo el lugar de la barra
+          vertical se reserva siempre (scrollbar-gutter), aunque las filas entren (última página, pantalla grande): sin
+          eso aparecía y desaparecía al cambiar de página y la tabla se movía de ancho. Se reserva el lugar y no la barra
+          (overflow-y-scroll): con las filas entrando, esa pintaba un carril vacío con sus flechas y parecía rota.
         */}
         <div
           ref={bodyRef}
           onScroll={onBodyScroll}
           onWheel={onBodyWheel}
           className={cn(
-            alturaFija ? 'overflow-x-auto overflow-y-scroll' : 'overflow-auto',
+            alturaFija ? 'overflow-auto [scrollbar-gutter:stable]' : 'overflow-auto',
             alturaFija ? 'min-h-[180px] bg-white' : 'max-h-[55vh]',
             alturaFija && altoCuerpo === null && 'h-[55vh]',
           )}
