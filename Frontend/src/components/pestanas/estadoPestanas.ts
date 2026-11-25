@@ -17,6 +17,8 @@ export type AccionPestanas =
   | { tipo: 'cerrar'; clave: string }
   | { tipo: 'cerrarOtras'; clave: string }
   | { tipo: 'cerrarDerecha'; clave: string }
+  /** Llevar una pestaña a otra posición (arrastrándola). No cambia cuál está activa. */
+  | { tipo: 'mover'; clave: string; a: number }
 
 export function reductorPestanas(maximo: number) {
   return (estado: EstadoPestanas, accion: AccionPestanas): EstadoPestanas => {
@@ -53,6 +55,15 @@ export function reductorPestanas(maximo: number) {
         if (en === -1 || en === claves.length - 1) return estado
         const resto = claves.slice(0, en + 1)
         return { claves: resto, activa: resto.includes(activa) ? activa : accion.clave }
+      }
+
+      case 'mover': {
+        const desde = claves.indexOf(accion.clave)
+        const a = Math.max(0, Math.min(claves.length - 1, accion.a))
+        if (desde === -1 || desde === a) return estado
+        const resto = claves.filter((c) => c !== accion.clave)
+        resto.splice(a, 0, accion.clave)
+        return { claves: resto, activa }
       }
     }
   }

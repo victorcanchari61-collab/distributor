@@ -55,6 +55,7 @@ export function usePestanasTrabajo({
   const cerrar = useCallback((clave: string) => despachar({ tipo: 'cerrar', clave }), [])
   const cerrarOtras = useCallback((clave: string) => despachar({ tipo: 'cerrarOtras', clave }), [])
   const cerrarDerecha = useCallback((clave: string) => despachar({ tipo: 'cerrarDerecha', clave }), [])
+  const mover = useCallback((clave: string, a: number) => despachar({ tipo: 'mover', clave, a }), [])
 
   return {
     claves: estado.claves,
@@ -65,5 +66,6 @@ export function usePestanasTrabajo({
     cerrar,
     cerrarOtras,
     cerrarDerecha,
+    mover,
   }
 }

@@ -271,6 +271,7 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
           activa={pestanas.activa}
           onElegir={(clave) => navigate(rutaDeClave(clave), { replace: true })}
           onCerrar={pestanas.cerrar}
+          onMover={pestanas.mover}
           opcionesDe={opcionesDe}
         />
       }
