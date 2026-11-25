@@ -176,12 +176,21 @@ export function KardexPage() {
       label: 'Motivo',
       filterType: 'select',
       filterOptions: motivos.map((m) => ({ value: m.nombre, label: m.nombre })),
-      render: (row) => (
-        <span className="flex items-center gap-1.5">
-          {row.motivo}
-          {row.anulado && <Badge tone="danger">Anulado</Badge>}
-        </span>
-      ),
+    },
+    {
+      // El motivo dice POR QUÉ se movió; el estado, si ese documento sigue en pie o se anuló. Antes el "Anulado" iba
+      // pegado al motivo y se leía como parte de él.
+      key: 'estado',
+      label: 'Estado',
+      sortable: false,
+      filterType: 'select',
+      filterOptions: [
+        { value: 'VIGENTE', label: 'Vigente' },
+        { value: 'ANULADO', label: 'Anulado' },
+      ],
+      value: (row) => (row.anulado ? 'ANULADO' : 'VIGENTE'),
+      render: (row) =>
+        row.anulado ? <Badge tone="danger">Anulado</Badge> : <Badge tone="success">Vigente</Badge>,
     },
     {
       key: 'producto',

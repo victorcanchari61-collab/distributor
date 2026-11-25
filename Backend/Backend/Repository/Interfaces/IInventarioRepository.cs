@@ -57,6 +57,16 @@ public static class TipoKardex
     public const string Reserva = "RESERVA";
 }
 
+/// <summary>
+/// El estado de una fila del kardex, para filtrar por la columna Estado: el de su documento (o el de su pedido, si es
+/// una reserva). No se guarda en ningun lado: se deduce.
+/// </summary>
+public static class EstadoKardexFila
+{
+    public const string Vigente = "VIGENTE";
+    public const string Anulado = "ANULADO";
+}
+
 public record ActividadStock(
     DateTime? UltimaEntrada, DateTime? UltimaSalida, decimal VendidoReciente);
 

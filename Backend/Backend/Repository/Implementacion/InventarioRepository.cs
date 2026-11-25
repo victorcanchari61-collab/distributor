@@ -689,6 +689,12 @@ public class InventarioRepository : IInventarioRepository
         if (consulta.ValorDe("tipo") is string tipo)
             query = query.Where(m => m.Tipo == tipo);
 
+        // El estado de la fila es el de su documento: ANULADO o VIGENTE.
+        if (consulta.ValorDe("estado") is string estado)
+            query = estado == EstadoKardexFila.Anulado
+                ? query.Where(m => m.Documento!.Estado == EstadoDocumento.Anulado)
+                : query.Where(m => m.Documento!.Estado != EstadoDocumento.Anulado);
+
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(m => m.Fecha >= desde);
         if (hasta is not null) query = query.Where(m => m.Fecha <= hasta);
@@ -746,6 +752,12 @@ public class InventarioRepository : IInventarioRepository
 
         if (consulta.ValorDe("tipo") is string tipo && tipo != TipoKardex.Reserva)
             query = query.Where(d => false);
+
+        // El estado de una reserva es el de su pedido.
+        if (consulta.ValorDe("estado") is string estado)
+            query = estado == EstadoKardexFila.Anulado
+                ? query.Where(d => d.Pedido!.Estado == EstadoPedido.Anulado)
+                : query.Where(d => d.Pedido!.Estado != EstadoPedido.Anulado);
 
         var (desde, hasta) = consulta.RangoFechas("fecha");
         if (desde is not null) query = query.Where(d => d.Pedido!.Fecha >= desde);
