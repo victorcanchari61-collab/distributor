@@ -1612,7 +1612,9 @@ function ColumnsButton<T>({
 
       <div
         className={cn(
-          'absolute right-0 z-30 mt-2 w-[min(15rem,calc(100vw-2rem))] origin-top-right rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 transition-all duration-150',
+          // z-40: la franja oscura de la cabecera sobre la barra de desplazamiento es z-30 y viene después en la
+          // página; con la misma capa se dibujaba encima del menú y le tapaba la esquina (y el botón "Todas").
+          'absolute right-0 z-40 mt-2 w-[min(15rem,calc(100vw-2rem))] origin-top-right rounded-xl bg-white shadow-xl shadow-zinc-900/10 ring-1 ring-zinc-200 transition-all duration-150',
           open ? 'scale-100 opacity-100' : 'pointer-events-none scale-95 opacity-0',
         )}
       >
