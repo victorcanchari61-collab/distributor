@@ -33,7 +33,7 @@ export function BarraInferior({ active, onSelect }: { active: string; onSelect: 
 
   return (
     <nav aria-label="Menú principal" className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-3">
-      <div className="pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-line bg-white p-1.5 shadow-panel [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div data-barra-inferior className="pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto rounded-full border border-line bg-white p-1.5 shadow-panel [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div data-sys="brand" className="shrink-0">
           <button
             type="button"

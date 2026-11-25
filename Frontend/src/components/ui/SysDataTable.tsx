@@ -7,8 +7,6 @@ import {
   ArrowUp,
   ChevronLeft,
   ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   ChevronsUpDown,
   GripVertical,
   Search,
@@ -212,7 +210,10 @@ type Row = Record<string, unknown>
 const RESERVA_INFERIOR = 68
 
 /** Una tabla de alto fijo nunca baja de aquí, por chica que sea la ventana. */
-const ALTO_MINIMO_CUERPO = 180
+const ALTO_MINIMO_CUERPO = 140
+
+/** Lo mínimo que tiene que quedar entre la paginación y la barra de navegación de abajo para ponerla a su costado. */
+const SEPARACION_BARRA = 12
 
 /**
  * Texto comparable de un valor: sin acentos y en minusculas, para que buscar
@@ -614,6 +615,7 @@ export function SysDataTable<T>({
 
   const headRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const pieRef = useRef<HTMLDivElement>(null)
 
   /** Al retroceder se cae al final de la pagina anterior, no a su principio. */
   const irAlFondoRef = useRef(false)
@@ -652,6 +654,13 @@ export function SysDataTable<T>({
    * Dentro de una ventana emergente no se aplica: ahí manda el alto de la ventana y se cae al 55% de siempre.
    */
   const [altoCuerpo, setAltoCuerpo] = useState<number | null>(null)
+  /*
+   * Con la barra de navegación abajo, <main> le deja todo su alto debajo para que nada quede tapado. Pero si la
+   * paginación (que va a la derecha) entra al costado de la barra, no hace falta subirla encima: baja hasta la altura
+   * de la barra (margen negativo sobre ese hueco) y la tabla se queda con ese alto. Se decide midiendo, no por ancho de
+   * pantalla: depende de cuánto mide la barra (con un grupo desplegado crece) y la paginación (más páginas, más ancha).
+   */
+  const [pieBajado, setPieBajado] = useState(0)
   useLayoutEffect(() => {
     if (!alturaFija) return
     const el = bodyRef.current
@@ -678,6 +687,30 @@ export function SysDataTable<T>({
             (parseFloat(getComputedStyle(ultimo).marginBottom) || 0) +
             (parseFloat(getComputedStyle(main).paddingBottom) || 0)
           : RESERVA_INFERIOR
+
+      // ¿Entra la paginación al costado de la barra de abajo? Solo si es lo último de la página (si la vista pone algo
+      // después, bajarla lo taparía). Bajada o no, el último bloque termina donde ella: el margen negativo no lo encoge
+      // (lo absorbe <main>), así que `debajo` mide lo mismo en los dos casos y no hay que descontar nada.
+      const barra = document.querySelector<HTMLElement>('[data-barra-inferior]')
+      const pie = pieRef.current
+      const botones = pie?.querySelector('nav')
+      let bajar = 0
+      if (barra && pie && botones && main && ultimo) {
+        const esLoUltimo = Math.abs(pie.getBoundingClientRect().bottom - ultimo.getBoundingClientRect().bottom) < 2
+        const alCostado = botones.getBoundingClientRect().left > barra.getBoundingClientRect().right + SEPARACION_BARRA
+        // Queda con el mismo margen inferior que el resto de páginas (el pb-4 de <main>).
+        if (esLoUltimo && alCostado) bajar = Math.max(0, (parseFloat(getComputedStyle(main).paddingBottom) || 0) - 16)
+        // El hueco que gana (o pierde) va al cuerpo de la tabla.
+        setPieBajado((actual) => (actual === bajar ? actual : bajar))
+        const alto = Math.max(
+          ALTO_MINIMO_CUERPO,
+          Math.floor(window.innerHeight - caja.top - window.scrollY - debajo - 1 + bajar),
+        )
+        setAltoCuerpo((actual) => (actual === alto ? actual : alto))
+        return
+      }
+      setPieBajado(0)
+
       const alto = Math.max(ALTO_MINIMO_CUERPO, Math.floor(window.innerHeight - caja.top - window.scrollY - debajo - 1))
       setAltoCuerpo((actual) => (actual === alto ? actual : alto))
     }
@@ -691,11 +724,16 @@ export function SysDataTable<T>({
     observador.observe(document.body)
     const panel = el.closest('[role="tabpanel"]')
     if (panel) observador.observe(panel)
+    // La barra de abajo crece al desplegar un grupo, y la paginación con la cantidad de páginas: cambia si entra al costado.
+    const barra = document.querySelector('[data-barra-inferior]')
+    if (barra) observador.observe(barra)
+    const botones = pieRef.current?.querySelector('nav')
+    if (botones) observador.observe(botones)
     return () => {
       window.removeEventListener('resize', calcular)
       observador.disconnect()
     }
-  }, [alturaFija, pageRows.length])
+  }, [alturaFija, pageRows.length, pageCount])
 
   useEffect(() => {
     const el = bodyRef.current
@@ -1153,7 +1191,7 @@ export function SysDataTable<T>({
           onWheel={onBodyWheel}
           className={cn(
             alturaFija ? 'overflow-auto [scrollbar-gutter:stable]' : 'overflow-auto',
-            alturaFija ? 'min-h-[180px] bg-white' : 'max-h-[55vh]',
+            alturaFija ? 'min-h-[140px] bg-white' : 'max-h-[55vh]',
             alturaFija && altoCuerpo === null && 'h-[55vh]',
           )}
           style={alturaFija && altoCuerpo !== null ? { height: altoCuerpo } : undefined}
@@ -1329,15 +1367,17 @@ export function SysDataTable<T>({
 
       {/* Solo los botones de página, y solo si hay más de una: el "Mostrando 1–20 de 22 · 20 por página" no aportaba. */}
       {paginacion && pageCount > 1 && (
-        <div className="mt-3 flex justify-end text-[13px] text-ink-muted">
-          {/* Los números van en una caja, igual que las pestañas: la página actual se rellena con el color del módulo. */}
+        <div
+          ref={pieRef}
+          className="mt-3 flex justify-end text-[13px] text-ink-muted"
+          style={alturaFija && pieBajado > 0 ? { marginBottom: -pieBajado } : undefined}
+        >
+          {/* Los números van en una caja, igual que las pestañas: la página actual se rellena con el color del módulo.
+              Sin « »: los números ya traen siempre la primera y la última, y sin ellos entra al costado de la barra. */}
           <nav
             aria-label="Paginación"
             className="flex items-center gap-1 rounded-xl border border-line bg-slate-200/70 p-1"
           >
-            <PageButton onClick={() => irAPagina(1)} disabled={page === 1} label="Primera">
-              <ChevronsLeft size={15} />
-            </PageButton>
             <PageButton
               onClick={() => irAPagina(page - 1)}
               disabled={page === 1}
@@ -1375,13 +1415,6 @@ export function SysDataTable<T>({
               label="Siguiente"
             >
               <ChevronRight size={15} />
-            </PageButton>
-            <PageButton
-              onClick={() => irAPagina(pageCount)}
-              disabled={page === pageCount}
-              label="Ultima"
-            >
-              <ChevronsRight size={15} />
             </PageButton>
           </nav>
         </div>
