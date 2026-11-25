@@ -41,6 +41,7 @@ public class ClienteValidator : AbstractValidator<ClienteRequestBase>
             .When(x => !string.IsNullOrWhiteSpace(x.DocumentoAlterno));
 
         RuleFor(x => x.Nombre).NotEmpty().WithMessage("Falta el nombre").MaximumLength(150);
+        RuleFor(x => x.NombreAlterno).MaximumLength(150);
         RuleFor(x => x.Direccion).MaximumLength(250);
         RuleFor(x => x.DistritoNombre).MaximumLength(80);
         RuleFor(x => x.Telefono).MaximumLength(40);

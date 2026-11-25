@@ -595,6 +595,10 @@ namespace Backend.Data.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("varchar(150)");
 
+                    b.Property<string>("NombreAlterno")
+                        .HasMaxLength(150)
+                        .HasColumnType("varchar(150)");
+
                     b.Property<int?>("RutaId")
                         .HasColumnType("int");
 

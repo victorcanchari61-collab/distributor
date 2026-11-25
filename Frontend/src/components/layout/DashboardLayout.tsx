@@ -102,7 +102,35 @@ export function DashboardLayout({
             : '',
         )}
       >
-        {/* La franja de arriba: las pestañas abiertas a la izquierda; la cuenta y la campana a la derecha. */}
+        {/*
+          Con la barra arriba, como en los sistemas de escritorio: una fila blanca a todo el ancho con los módulos y la
+          cuenta; debajo las pestañas de trabajo, pegadas al contenido (la activa se funde con la página, así que entre
+          ellas y la vista no puede ir nada).
+        */}
+        {superior ? (
+          <header className="sticky top-0 z-30">
+            <div className="flex h-14 items-center gap-3 border-b border-line bg-white px-3 sm:px-5">
+              <BarraNavegacion active={active} onSelect={onSelect} colocacion="superior" />
+
+              <div className="flex shrink-0 items-center gap-2">
+                <MenuCuenta
+                  nombre={userName}
+                  email={userEmail}
+                  foto={userFoto}
+                  onPerfil={onPerfil}
+                  onLogout={onLogout}
+                  formato={formato}
+                  onFormato={onFormato}
+                  lado={lado}
+                  onLado={onLado}
+                />
+                <CampanaAlertas onNavigate={onSelect} />
+              </div>
+            </div>
+            <div className="bg-slate-200/80 pt-1.5 pr-3 pl-1 backdrop-blur sm:pr-5">{pestanas}</div>
+          </header>
+        ) : (
+          /* La franja de arriba: las pestañas abiertas a la izquierda; la cuenta y la campana a la derecha. */
         <header className="sticky top-0 z-30 bg-slate-200/80 pt-1.5 pr-3 pl-1 backdrop-blur sm:pr-5">
           <div className="flex items-end gap-2">
             {lateral && (
@@ -159,13 +187,8 @@ export function DashboardLayout({
             </div>
           </div>
 
-          {/* La navegación en barra arriba: una fila propia debajo de las pestañas. */}
-          {superior && (
-            <div className="mt-2 pb-2">
-              <BarraNavegacion active={active} onSelect={onSelect} colocacion="superior" />
-            </div>
-          )}
         </header>
+        )}
 
         {/*
           Con la barra de abajo se le deja todo su alto debajo, en cualquier ancho, para que nada quede tapado. Las

@@ -44,6 +44,7 @@ const VACIO: ClienteRequest = {
   documento: '',
   tipoDoc: 'DNI',
   documentoAlterno: '',
+  nombreAlterno: '',
   nombre: '',
   direccion: '',
   distritoId: 0,
@@ -184,6 +185,7 @@ export function ClientesPage() {
       documento: cliente.documento,
       tipoDoc: cliente.tipoDoc,
       documentoAlterno: cliente.documentoAlterno ?? '',
+      nombreAlterno: cliente.nombreAlterno ?? '',
       nombre: cliente.nombre,
       direccion: cliente.direccion ?? '',
       distritoId: cliente.distritoId ?? 0,
@@ -237,14 +239,27 @@ export function ClientesPage() {
     }
   }
 
-  /** Del RUC del segundo documento solo se toma la dirección, y solo si no hay una: el nombre ya lo trae el primero. */
+  /**
+   * El segundo documento trae SU nombre: la razón social del RUC (que es la de la empresa si es un RUC 20) o el nombre
+   * del DNI. Del RUC también la dirección, pero solo si no hay una.
+   */
   const consultarAlterno = async (documento: string, tipo: TipoDocumento) => {
-    if (tipo !== 'RUC') return
     setConsultando(true)
     try {
-      const datos = await consultaApi.ruc(documento)
-      setForm((prev) => ({ ...prev, direccion: prev.direccion || (datos.direccion ?? '') }))
-      toast.exito(`RUC de ${datos.razonSocial}`)
+      if (tipo === 'RUC') {
+        const datos = await consultaApi.ruc(documento)
+        setForm((prev) => ({
+          ...prev,
+          nombreAlterno: datos.razonSocial,
+          direccion: prev.direccion || (datos.direccion ?? ''),
+        }))
+      } else if (tipo === 'DNI') {
+        const datos = await consultaApi.dni(documento)
+        setForm((prev) => ({
+          ...prev,
+          nombreAlterno: `${datos.apellidoPaterno} ${datos.apellidoMaterno} ${datos.nombres}`.replace(/\s+/g, ' ').trim(),
+        }))
+      }
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'No pudimos consultar el documento.')
     } finally {
@@ -267,6 +282,8 @@ export function ClientesPage() {
       const cuerpo = {
         ...form,
         documentoAlterno: form.tipoDoc === 'CODIGO' ? null : alterno || null,
+        // Sin segundo documento no hay a qué nombre asociarlo.
+        nombreAlterno: form.tipoDoc === 'CODIGO' || !alterno ? null : form.nombreAlterno?.trim() || null,
         mercadoId: form.mercadoId || null,
         rutaId: form.rutaId || null,
         distritoId: form.distritoId || null,
@@ -420,9 +437,13 @@ export function ClientesPage() {
       value: (row) => (row.documentoAlterno ? `${row.tipoDocAlterno ?? ''} ${row.documentoAlterno}`.trim() : ''),
       render: (row) =>
         row.documentoAlterno ? (
-          <span className="text-ink-soft">
-            {row.tipoDocAlterno} {row.documentoAlterno}
-          </span>
+          <div className="flex flex-col">
+            <span className="text-ink-soft">
+              {row.tipoDocAlterno} {row.documentoAlterno}
+            </span>
+            {/* Solo si es otro nombre (una empresa); si no, es el mismo de la columna Nombre. */}
+            {row.nombreAlterno && <span className="text-xs text-ink-soft">{row.nombreAlterno}</span>}
+          </div>
         ) : (
           <span className="text-ink-soft">—</span>
         ),
@@ -621,7 +642,7 @@ export function ClientesPage() {
             <DocumentoInput
               className="sm:col-span-2"
               tipo={(form.tipoDoc as TipoDocumento) ?? 'DNI'}
-              onTipoChange={(tipoDoc) => setForm((prev) => ({ ...prev, tipoDoc, documentoAlterno: '' }))}
+              onTipoChange={(tipoDoc) => setForm((prev) => ({ ...prev, tipoDoc, documentoAlterno: '', nombreAlterno: '' }))}
               value={form.documento}
               onChange={(documento) => setForm((prev) => ({ ...prev, documento }))}
               onBuscar={consultarDocumento}
@@ -637,16 +658,27 @@ export function ClientesPage() {
                 label={form.tipoDoc === 'DNI' ? 'RUC (si también tiene)' : 'DNI (si también tiene)'}
                 value={form.documentoAlterno ?? ''}
                 onChange={(documentoAlterno) => setForm((prev) => ({ ...prev, documentoAlterno }))}
-                onBuscar={form.tipoDoc === 'DNI' ? consultarAlterno : undefined}
+                onBuscar={consultarAlterno}
                 buscando={consultando}
               />
             )}
 
+            {/* Cada documento con su nombre: el del RUC es la razón social, que en un RUC 20 (empresa) no es el de la persona. */}
             <Input
-              label="Nombre"
+              label={form.tipoDoc === 'RUC' ? 'Razón social' : 'Nombre'}
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
             />
+
+            {(form.tipoDoc === 'DNI' || form.tipoDoc === 'RUC') && (form.documentoAlterno ?? '') !== '' && (
+              <Input
+                label={form.tipoDoc === 'DNI' ? 'Razón social del RUC' : 'Nombre del DNI'}
+                optional
+                placeholder={form.tipoDoc === 'DNI' ? 'Igual al nombre (RUC 10)' : 'Igual a la razón social'}
+                value={form.nombreAlterno ?? ''}
+                onChange={(e) => setForm({ ...form, nombreAlterno: e.target.value })}
+              />
+            )}
 
             <Input
               label="Dirección"

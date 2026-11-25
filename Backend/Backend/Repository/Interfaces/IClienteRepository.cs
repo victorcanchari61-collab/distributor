@@ -28,7 +28,13 @@ public interface IClienteRepository : IRepository<Cliente>
     Task<Cliente?> GetByDocumentoAsync(string documento);
     Task<bool> ExistsByDocumentoAsync(string documento, int? excludeId = null);
 
-    /// <summary>Borrado definitivo.</summary>
+    /// <summary>
+    /// Lo que tiene registrado y no se puede perder (pedidos, notas de venta, gestiones), por nombre: vacío si se puede
+    /// borrar.
+    /// </summary>
+    Task<List<string>> HistorialQueImpideBorrarAsync(int clienteId);
+
+    /// <summary>Borrado definitivo. Se lleva su categoría (es calculada, no historial).</summary>
     Task DeleteAsync(Cliente entidad);
 
     /// <summary>

@@ -46,6 +46,9 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
   late final _nombre = TextEditingController(
     text: widget.cliente?.nombre ?? '',
   );
+  late final _nombreAlterno = TextEditingController(
+    text: widget.cliente?.nombreAlterno ?? '',
+  );
   late final _direccion = TextEditingController(
     text: widget.cliente?.direccion ?? '',
   );
@@ -77,7 +80,14 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
 
   @override
   void dispose() {
-    for (final c in [_documento, _alterno, _nombre, _direccion, _telefono]) {
+    for (final c in [
+      _documento,
+      _alterno,
+      _nombre,
+      _nombreAlterno,
+      _direccion,
+      _telefono,
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -148,6 +158,14 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
       // Nulo al quitarlo: así el servidor borra el que tenía guardado.
       'documentoAlterno': _admiteAlterno && _alterno.text.trim().isNotEmpty
           ? _alterno.text.trim()
+          : null,
+      // Va siempre (nulo si no hay segundo documento o se dejo vacio): si no se
+      // mandara, el servidor borraria la razon social cargada desde el panel.
+      'nombreAlterno':
+          _admiteAlterno &&
+              _alterno.text.trim().isNotEmpty &&
+              _nombreAlterno.text.trim().isNotEmpty
+          ? _nombreAlterno.text.trim()
           : null,
       'direccion': _direccion.text.trim(),
       'distritoId': _distritoId,
@@ -220,6 +238,7 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
                       // al cambiar este, el que había ya no corresponde (igual
                       // que en el panel web).
                       _alterno.clear();
+                      _nombreAlterno.clear();
                       _errorAlterno = null;
                       // Se recorta si el nuevo tipo admite menos digitos.
                       final max = _largo.max;
@@ -265,15 +284,45 @@ class _ClienteFormularioState extends ConsumerState<ClienteFormulario> {
               const SizedBox(height: Dimen.espacio4),
             ],
 
+            // Cada documento con su nombre: el del RUC es la razon social, que
+            // en un RUC 20 (empresa) no es el de la persona del DNI.
             AppCampo(
               controlador: _nombre,
-              etiqueta: 'Nombre',
+              etiqueta: _tipoDoc == 'RUC' ? 'Razón social' : 'Nombre',
               icono: Icons.person_outline,
               pista: 'Nombre del cliente o del puesto',
               error: _errorNombre,
               habilitado: !_guardando,
             ),
             const SizedBox(height: Dimen.espacio4),
+
+            // Solo con segundo documento escrito: sin el, no hay a que nombre
+            // asociarlo.
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _alterno,
+              builder: (context, valor, _) {
+                if (!_admiteAlterno || valor.text.trim().isEmpty) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: Dimen.espacio4),
+                  child: AppCampo(
+                    controlador: _nombreAlterno,
+                    etiqueta: _tipoAlterno == 'RUC'
+                        ? 'Razón social del RUC'
+                        : 'Nombre del DNI',
+                    icono: _tipoAlterno == 'RUC'
+                        ? Icons.apartment_outlined
+                        : Icons.person_outline,
+                    opcional: true,
+                    pista: _tipoAlterno == 'RUC'
+                        ? 'Vacío: igual al nombre (RUC 10)'
+                        : 'Vacío: igual a la razón social',
+                    habilitado: !_guardando,
+                  ),
+                );
+              },
+            ),
 
             AppCampo(
               controlador: _direccion,

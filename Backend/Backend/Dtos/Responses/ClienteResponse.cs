@@ -12,6 +12,9 @@ public class ClienteResponse
     /// <summary>El otro documento (DNI y RUC a la vez); nulo si solo tiene uno.</summary>
     public string? DocumentoAlterno { get; set; }
     public string? TipoDocAlterno { get; set; }
+
+    /// <summary>El nombre del segundo documento (razón social del RUC, por ejemplo); nulo si es el mismo que Nombre.</summary>
+    public string? NombreAlterno { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
     public int? DistritoId { get; set; }

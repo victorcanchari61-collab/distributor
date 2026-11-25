@@ -12,6 +12,8 @@ export interface ClienteResponse {
   /** El otro documento cuando tiene DNI y RUC a la vez (si el principal es DNI, este es el RUC, y al revés). */
   documentoAlterno: string | null
   tipoDocAlterno: string | null
+  /** El nombre del segundo documento (la razón social si es el RUC de una empresa); null si es el mismo que `nombre`. */
+  nombreAlterno: string | null
   nombre: string
   direccion: string | null
   distritoId: number | null
@@ -68,6 +70,8 @@ export interface ClienteRequest {
   tipoDoc?: string
   /** Opcional: el otro documento (RUC si el principal es DNI, DNI si es RUC). */
   documentoAlterno?: string | null
+  /** Opcional: el nombre del segundo documento. Vacío usa `nombre` (lo correcto con un RUC 10). */
+  nombreAlterno?: string | null
   nombre: string
   direccion?: string | null
   distritoId?: number | null

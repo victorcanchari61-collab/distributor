@@ -14,6 +14,11 @@ public abstract class ClienteRequestBase
     /// </summary>
     public string? DocumentoAlterno { get; set; }
 
+    /// <summary>
+    /// Opcional: el nombre del segundo documento (la razón social si es un RUC de empresa). Vacío usa <see cref="Nombre"/>.
+    /// </summary>
+    public string? NombreAlterno { get; set; }
+
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
 

@@ -755,25 +755,38 @@ public class ComprobanteElectronicoService : IComprobanteElectronicoService
     /// <summary>
     /// El cliente como lo pide SUNAT. La factura exige RUC. La boleta acepta DNI o RUC, y bajo S/ 700 también
     /// "clientes varios" (sin documento).
+    ///
+    /// Cada documento va con SU nombre: el principal con <see cref="Cliente.Nombre"/> y el segundo con
+    /// <see cref="Cliente.NombreAlterno"/> (la razón social si es el RUC de una empresa). Si el segundo no tiene nombre
+    /// propio se usa el principal, que es lo correcto con un RUC 10: su razón social es el nombre del DNI.
     /// </summary>
     private static ClienteCpe ClienteDe(Cliente c, string tipo, decimal total)
     {
         // Un cliente puede tener DNI y RUC a la vez: se busca cada uno entre el documento principal y el segundo.
         static string? Valido(string? numero, string? tipo, string esperado, int largo) =>
             tipo == esperado && numero is { } n && n.Trim().Length == largo && n.Trim().All(char.IsDigit) ? n.Trim() : null;
-        var ruc = Valido(c.Documento, c.TipoDoc, TipoDocumento.Ruc, 11) ?? Valido(c.DocumentoAlterno, c.TipoDocAlterno, TipoDocumento.Ruc, 11);
-        var dni = Valido(c.Documento, c.TipoDoc, TipoDocumento.Dni, 8) ?? Valido(c.DocumentoAlterno, c.TipoDocAlterno, TipoDocumento.Dni, 8);
+        var nombreAlterno = string.IsNullOrWhiteSpace(c.NombreAlterno) ? c.Nombre : c.NombreAlterno.Trim();
+
+        // (número, nombre) de cada tipo, del principal o, si no, del segundo.
+        (string Numero, string Nombre)? Buscar(string tipoDoc, int largo) =>
+            Valido(c.Documento, c.TipoDoc, tipoDoc, largo) is { } principal
+                ? (principal, c.Nombre)
+                : Valido(c.DocumentoAlterno, c.TipoDocAlterno, tipoDoc, largo) is { } segundo
+                    ? (segundo, nombreAlterno)
+                    : null;
+        var ruc = Buscar(TipoDocumento.Ruc, 11);
+        var dni = Buscar(TipoDocumento.Dni, 8);
 
         // La factura exige RUC.
         if (tipo == TipoCpe.Factura)
         {
-            if (ruc is null) throw new BadRequestException("Para emitir una factura el cliente necesita un RUC de 11 dígitos");
-            return new ClienteCpe("6", ruc, c.Nombre, c.Direccion);
+            if (ruc is not { } r) throw new BadRequestException("Para emitir una factura el cliente necesita un RUC de 11 dígitos");
+            return new ClienteCpe("6", r.Numero, r.Nombre, c.Direccion);
         }
 
         // La boleta prefiere el DNI; sin DNI, el RUC.
-        if (dni is not null) return new ClienteCpe("1", dni, c.Nombre, c.Direccion);
-        if (ruc is not null) return new ClienteCpe("6", ruc, c.Nombre, c.Direccion);
+        if (dni is { } d) return new ClienteCpe("1", d.Numero, d.Nombre, c.Direccion);
+        if (ruc is { } rb) return new ClienteCpe("6", rb.Numero, rb.Nombre, c.Direccion);
 
         if (total >= MontoBoletaConDocumento)
             throw new BadRequestException($"Una boleta desde S/ {MontoBoletaConDocumento:0} necesita el DNI del cliente");

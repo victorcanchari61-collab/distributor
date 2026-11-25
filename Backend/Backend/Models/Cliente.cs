@@ -19,6 +19,14 @@ public class Cliente
     /// <summary>DNI o RUC, deducido del largo de <see cref="DocumentoAlterno"/>.</summary>
     public string? TipoDocAlterno { get; set; }
 
+    /// <summary>
+    /// El nombre que va con <see cref="DocumentoAlterno"/>, porque no siempre es el mismo que <see cref="Nombre"/>: si el
+    /// segundo documento es un RUC 20 (una empresa: EIRL, SAC...), su razón social es la de la empresa, no la de la
+    /// persona del DNI. Vacío usa <see cref="Nombre"/>, que es lo correcto con un RUC 10 (persona natural): su razón social
+    /// es el mismo nombre del DNI.
+    /// </summary>
+    public string? NombreAlterno { get; set; }
+
     public string Nombre { get; set; } = string.Empty;
     public string? Direccion { get; set; }
 

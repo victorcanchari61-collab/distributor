@@ -44,15 +44,19 @@ export const BotonHerramienta = forwardRef<HTMLButtonElement, BotonHerramientaPr
         )}
       </button>
 
-      {/* Burbuja con el nombre. Con el panel abierto se esconde: taparía el menú. */}
+      {/*
+        Burbuja con el nombre. Con el panel abierto se esconde: taparía el menú. Va alineada a la derecha del botón, no
+        centrada: estos botones van al borde derecho de la tabla y, centrada, la mitad salía de la pantalla (aun
+        invisible, ensanchaba la página y aparecía la barra horizontal).
+      */}
       <span
         role="presentation"
         className={cn(
-          'pointer-events-none absolute bottom-full left-1/2 z-40 mb-2 -translate-x-1/2 rounded-md bg-slate-800 px-2.5 py-1.5',
+          'pointer-events-none absolute right-0 bottom-full z-40 mb-2 rounded-md bg-slate-800 px-2.5 py-1.5',
           'text-[11px] leading-none font-semibold tracking-wide whitespace-nowrap text-white uppercase opacity-0 shadow-lg',
           !activo && 'group-hover/herr:opacity-100 group-focus-within/herr:opacity-100',
-          // flecha
-          'after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-[5px] after:border-transparent after:border-t-slate-800',
+          // flecha, sobre el centro del botón (w-9: 18px desde su borde derecho)
+          'after:absolute after:top-full after:right-[13px] after:border-[5px] after:border-transparent after:border-t-slate-800',
         )}
       >
         {etiqueta}

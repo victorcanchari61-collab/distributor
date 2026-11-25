@@ -8,6 +8,7 @@ class Cliente {
     required this.activo,
     this.documentoAlterno,
     this.tipoDocAlterno,
+    this.nombreAlterno,
     this.direccion,
     this.distritoId,
     this.distrito,
@@ -45,6 +46,11 @@ class Cliente {
 
   /// Tipo del segundo documento: DNI o RUC. Nulo si no hay segundo documento.
   final String? tipoDocAlterno;
+
+  /// El nombre del segundo documento, si no es el mismo que [nombre]: la razon
+  /// social de un RUC de empresa (RUC 20). Nulo usa [nombre], que es lo correcto
+  /// con un RUC 10 (su razon social es el nombre del DNI).
+  final String? nombreAlterno;
 
   final String? direccion;
 
@@ -116,7 +122,7 @@ class Cliente {
 
   /// Texto contra el que se busca en la lista.
   String get buscable =>
-      '$codigo $documento ${documentoAlterno ?? ''} $nombre ${direccion ?? ''} ${distrito ?? ''} ${mercado ?? ''} ${ruta ?? ''}'
+      '$codigo $documento ${documentoAlterno ?? ''} $nombre ${nombreAlterno ?? ''} ${direccion ?? ''} ${distrito ?? ''} ${mercado ?? ''} ${ruta ?? ''}'
           .toLowerCase();
 
   factory Cliente.desdeJson(Map<String, dynamic> json) => Cliente(
@@ -126,6 +132,7 @@ class Cliente {
     nombre: json['nombre'] as String? ?? '',
     documentoAlterno: json['documentoAlterno'] as String?,
     tipoDocAlterno: json['tipoDocAlterno'] as String?,
+    nombreAlterno: json['nombreAlterno'] as String?,
     direccion: json['direccion'] as String?,
     distritoId: json['distritoId'] as int?,
     distrito: json['distrito'] as String?,
@@ -155,6 +162,7 @@ class Cliente {
     'tipoDoc': tipoDoc,
     'nombre': nombre,
     'documentoAlterno': documentoAlterno,
+    'nombreAlterno': nombreAlterno,
     'direccion': direccion,
     'distritoId': distritoId,
     'telefono': telefono,
@@ -169,6 +177,7 @@ class Cliente {
     String? tipoDoc,
     String? nombre,
     String? documentoAlterno,
+    String? nombreAlterno,
     String? direccion,
     int? distritoId,
     String? telefono,
@@ -184,6 +193,7 @@ class Cliente {
     nombre: nombre ?? this.nombre,
     documentoAlterno: documentoAlterno ?? this.documentoAlterno,
     tipoDocAlterno: tipoDocAlterno,
+    nombreAlterno: nombreAlterno ?? this.nombreAlterno,
     direccion: direccion ?? this.direccion,
     distritoId: distritoId ?? this.distritoId,
     distrito: distrito,

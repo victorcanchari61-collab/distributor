@@ -489,6 +489,7 @@ public class AppDbContext : DbContext
             entity.Property(c => c.Documento).HasMaxLength(15).IsRequired();
             entity.Property(c => c.TipoDoc).HasMaxLength(10).IsRequired();
             entity.Property(c => c.Nombre).HasMaxLength(150).IsRequired();
+            entity.Property(c => c.NombreAlterno).HasMaxLength(150);
             entity.Property(c => c.Direccion).HasMaxLength(250);
             entity.Property(c => c.Telefono).HasMaxLength(40);
             entity.Property(c => c.Email).HasMaxLength(100);

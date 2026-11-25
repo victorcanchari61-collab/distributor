@@ -36,6 +36,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             query = query.Where(c =>
                 (porCodigo != null && c.Id == porCodigo)
                 || EF.Functions.Like(c.Nombre, texto) || EF.Functions.Like(c.Documento, texto)
+                || (c.NombreAlterno != null && EF.Functions.Like(c.NombreAlterno, texto))
                 || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, texto))
                 || (c.Distrito != null && EF.Functions.Like(c.Distrito.Nombre, texto))
                 || (c.Ruta != null && EF.Functions.Like(c.Ruta.Nombre, texto)));
@@ -45,7 +46,8 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             query = query.Where(c => EF.Functions.Like(c.Documento, $"%{documento}%")
                 || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, $"%{documento}%")));
         if (consulta.ValorDe("nombre") is string nombre)
-            query = query.Where(c => EF.Functions.Like(c.Nombre, $"%{nombre}%"));
+            query = query.Where(c => EF.Functions.Like(c.Nombre, $"%{nombre}%")
+                || (c.NombreAlterno != null && EF.Functions.Like(c.NombreAlterno, $"%{nombre}%")));
         if (consulta.ValorDe("distrito") is string distrito)
             query = query.Where(c => c.Distrito != null && EF.Functions.Like(c.Distrito.Nombre, $"%{distrito}%"));
         if (consulta.ValorDe("ruta") is string ruta)
@@ -115,8 +117,27 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         return await DbSet.AnyAsync(c => (c.Documento == documento || c.DocumentoAlterno == documento) && c.Id != excludeId);
     }
 
+    public async Task<List<string>> HistorialQueImpideBorrarAsync(int clienteId)
+    {
+        var historial = new List<string>();
+        if (await Context.Pedidos.AnyAsync(p => p.ClienteId == clienteId)) historial.Add("pedidos");
+        if (await Context.NotasVenta.AnyAsync(n => n.ClienteId == clienteId)) historial.Add("notas de venta");
+        if (await Context.GestionesCliente.AnyAsync(g => g.ClienteId == clienteId)) historial.Add("gestiones");
+        return historial;
+    }
+
     public async Task DeleteAsync(Cliente entidad)
     {
+        // La categoría es calculada: cada cliente nuevo recibe una apenas se crea (CompletarSinCategoriaAsync), y sin
+        // borrarla antes la base rechazaba el borrado de cualquier cliente. Su cálculo deja de contarlo.
+        var categorias = await Context.ClientesCategoria
+            .Include(c => c.Calculo)
+            .Where(c => c.ClienteId == entidad.Id)
+            .ToListAsync();
+        foreach (var categoria in categorias)
+            if (categoria.Calculo is not null) categoria.Calculo.Clientes = Math.Max(0, categoria.Calculo.Clientes - 1);
+        Context.ClientesCategoria.RemoveRange(categorias);
+
         DbSet.Remove(entidad);
         await Context.SaveChangesAsync();
     }
@@ -182,6 +203,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
             || EF.Functions.Like(c.Documento, $"%{texto}%")
             || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, $"%{texto}%"))
             || EF.Functions.Like(c.Nombre, $"%{texto}%")
+            || (c.NombreAlterno != null && EF.Functions.Like(c.NombreAlterno, $"%{texto}%"))
             || (c.Direccion != null && EF.Functions.Like(c.Direccion, $"%{texto}%"))
             || (c.Telefono != null && EF.Functions.Like(c.Telefono, $"%{texto}%"))
             || (c.Email != null && EF.Functions.Like(c.Email, $"%{texto}%"))
@@ -232,7 +254,9 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
                     : EF.Functions.Like(c.Documento, $"%{valor}%") || (c.DocumentoAlterno != null && EF.Functions.Like(c.DocumentoAlterno, $"%{valor}%"))),
             "tipoDoc" => query.Where(c => c.TipoDoc == valor),
             "nombre" => query.Where(c =>
-                exacto ? c.Nombre == valor : EF.Functions.Like(c.Nombre, $"%{valor}%")),
+                exacto
+                    ? c.Nombre == valor || c.NombreAlterno == valor
+                    : EF.Functions.Like(c.Nombre, $"%{valor}%") || (c.NombreAlterno != null && EF.Functions.Like(c.NombreAlterno, $"%{valor}%"))),
             "direccion" => query.Where(c => c.Direccion != null &&
                 (exacto ? c.Direccion == valor : EF.Functions.Like(c.Direccion, $"%{valor}%"))),
             "telefono" => query.Where(c => c.Telefono != null &&

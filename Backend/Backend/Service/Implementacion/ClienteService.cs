@@ -304,9 +304,21 @@ public class ClienteService : IClienteService
     {
         var cliente = await GetOrThrowAsync(id);
         await ExigirAlcanceAsync(cliente);
+
+        // Con historial no se borra (la base lo rechazaría igual, pero con un error 500 que no dice nada): se desactiva,
+        // y así no aparece en nuevas operaciones sin perder sus pedidos ni sus ventas.
+        var historial = await _repository.HistorialQueImpideBorrarAsync(cliente.Id);
+        if (historial.Count > 0)
+            throw new ConflictException(
+                $"No se puede eliminar: el cliente tiene {Enumerar(historial)} registrados. Desactívalo para que no aparezca en nuevas operaciones.");
+
         await _repository.DeleteAsync(cliente);
         await _notificador.AvisarAsync("clientes", "eliminado", new { id });
     }
+
+    /// <summary>"pedidos", "pedidos y notas de venta", "pedidos, notas de venta y gestiones".</summary>
+    private static string Enumerar(IReadOnlyList<string> partes) =>
+        partes.Count == 1 ? partes[0] : $"{string.Join(", ", partes.Take(partes.Count - 1))} y {partes[^1]}";
 
     /// <summary>
     /// Alta masiva desde archivo.
@@ -441,6 +453,9 @@ public class ClienteService : IClienteService
         cliente.DocumentoAlterno = alterno;
         cliente.TipoDocAlterno = alterno is null ? null : TipoDocumento.Deducir(alterno);
         cliente.Nombre = request.Nombre.Trim();
+        // Sin segundo documento no hay a qué nombre asociarlo; igual al principal, no aporta nada.
+        var nombreAlterno = alterno is null ? null : Limpiar(request.NombreAlterno);
+        cliente.NombreAlterno = nombreAlterno is not null && nombreAlterno != cliente.Nombre ? nombreAlterno : null;
         cliente.Direccion = Limpiar(request.Direccion);
         cliente.DistritoId = distrito?.Id;
         cliente.Distrito = distrito;
@@ -590,6 +605,7 @@ public class ClienteService : IClienteService
             TipoDoc = cliente.TipoDoc,
             DocumentoAlterno = cliente.DocumentoAlterno,
             TipoDocAlterno = cliente.TipoDocAlterno,
+            NombreAlterno = cliente.NombreAlterno,
             Nombre = cliente.Nombre,
             Direccion = cliente.Direccion,
             DistritoId = cliente.DistritoId,

@@ -37,12 +37,14 @@ Map<String, dynamic> _json({
   String tipoDoc = 'DNI',
   String? documentoAlterno,
   String? tipoDocAlterno,
+  String? nombreAlterno,
 }) => {
   'id': 4,
   'documento': documento,
   'tipoDoc': tipoDoc,
   'documentoAlterno': documentoAlterno,
   'tipoDocAlterno': tipoDocAlterno,
+  'nombreAlterno': nombreAlterno,
   'nombre': 'ANA LEANDRO',
   'activo': true,
 };
@@ -232,6 +234,78 @@ void main() {
 
       expect(api.ultimoCuerpo, contains('documentoAlterno'));
       expect(api.ultimoCuerpo?['documentoAlterno'], isNull);
+      await tester.pump(const Duration(seconds: 6));
+    });
+
+    testWidgets(
+      'la razón social del RUC aparece con el RUC y viaja al guardar',
+      (tester) async {
+        final api = await _montar(tester, cliente: Cliente.desdeJson(_json()));
+
+        // Sin segundo documento no hay a qué nombre asociarlo.
+        expect(find.textContaining('Razón social del RUC'), findsNothing);
+
+        await tester.enterText(find.byType(TextField).at(1), '20601234567');
+        await tester.pumpAndSettle();
+        expect(find.textContaining('Razón social del RUC'), findsOneWidget);
+
+        await tester.enterText(
+          find.byType(TextField).at(3),
+          'BODEGA ANITA EIRL',
+        );
+        await tester.tap(find.text('Guardar'));
+        await tester.pumpAndSettle();
+
+        expect(api.ultimoCuerpo?['nombre'], 'ANA LEANDRO');
+        expect(api.ultimoCuerpo?['nombreAlterno'], 'BODEGA ANITA EIRL');
+        await tester.pump(const Duration(seconds: 6));
+      },
+    );
+
+    testWidgets('editar otra cosa no borra la razón social que ya tenía', (
+      tester,
+    ) async {
+      final api = await _montar(
+        tester,
+        cliente: Cliente.desdeJson(
+          _json(
+            documentoAlterno: '20601234567',
+            tipoDocAlterno: 'RUC',
+            nombreAlterno: 'BODEGA ANITA EIRL',
+          ),
+        ),
+      );
+
+      expect(find.text('BODEGA ANITA EIRL'), findsOneWidget);
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(api.ultimoCuerpo?['nombreAlterno'], 'BODEGA ANITA EIRL');
+      await tester.pump(const Duration(seconds: 6));
+    });
+
+    testWidgets('sin segundo documento la razón social se manda nula', (
+      tester,
+    ) async {
+      final api = await _montar(
+        tester,
+        cliente: Cliente.desdeJson(
+          _json(
+            documentoAlterno: '20601234567',
+            tipoDocAlterno: 'RUC',
+            nombreAlterno: 'BODEGA ANITA EIRL',
+          ),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField).at(1), '');
+      await tester.pumpAndSettle();
+      expect(find.text('BODEGA ANITA EIRL'), findsNothing);
+      await tester.tap(find.text('Guardar'));
+      await tester.pumpAndSettle();
+
+      expect(api.ultimoCuerpo, contains('nombreAlterno'));
+      expect(api.ultimoCuerpo?['nombreAlterno'], isNull);
       await tester.pump(const Duration(seconds: 6));
     });
 
