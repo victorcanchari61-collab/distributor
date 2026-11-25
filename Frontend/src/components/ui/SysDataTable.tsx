@@ -1146,12 +1146,20 @@ export function SysDataTable<T>({
         )}
         </div>
 
-        {/* solo las filas se desplazan: la barra queda por debajo de la cabecera */}
+        {/*
+          solo las filas se desplazan: la barra queda por debajo de la cabecera. Con alto fijo la barra vertical está
+          siempre, aunque las filas entren (última página, pantalla grande): antes aparecía y desaparecía al cambiar de
+          página y la tabla se movía de ancho.
+        */}
         <div
           ref={bodyRef}
           onScroll={onBodyScroll}
           onWheel={onBodyWheel}
-          className={cn('overflow-auto', alturaFija ? 'min-h-[180px] bg-white' : 'max-h-[55vh]', alturaFija && altoCuerpo === null && 'h-[55vh]')}
+          className={cn(
+            alturaFija ? 'overflow-x-auto overflow-y-scroll' : 'overflow-auto',
+            alturaFija ? 'min-h-[180px] bg-white' : 'max-h-[55vh]',
+            alturaFija && altoCuerpo === null && 'h-[55vh]',
+          )}
           style={alturaFija && altoCuerpo !== null ? { height: altoCuerpo } : undefined}
         >
           <table
