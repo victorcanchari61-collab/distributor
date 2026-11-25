@@ -86,6 +86,15 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     stockProvider,
     kardexProvider,
   ],
+  // Una devolucion al proveedor cambia la compra, el stock y puede dejar saldo a favor.
+  'devolucionesproveedor': [
+    devolucionesProveedorProvider,
+    comprasProvider,
+    saldosFavorProvider,
+    stockProvider,
+    kardexProvider,
+  ],
+  'saldosproveedor': [saldosFavorProvider, cuentasPorPagarProvider],
   'ajustes': [ajustesProvider, stockProvider, kardexProvider],
   'transferencias': [transferenciasProvider, stockProvider, kardexProvider],
   'prestamos': [prestamosProvider, stockProvider, kardexProvider],

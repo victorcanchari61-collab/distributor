@@ -123,6 +123,9 @@ public interface IInventarioRepository
     /// promediar costos distintos en una sola.
     /// </summary>
     Task<List<CapaCosto>> GetCapasDeMovimientoAsync(int movimientoId);
+
+    /// <summary>Los movimientos con que se recibió una línea de compra, sin contar las recepciones anuladas.</summary>
+    Task<HashSet<int>> GetMovimientosRecepcionDeLineaAsync(int compraDetalleId);
     Task AddCapaAsync(CapaCosto capa);
 
     /// <summary>Totales del stock de todo el catálogo, resueltos con agregados.</summary>

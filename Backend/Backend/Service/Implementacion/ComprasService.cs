@@ -98,7 +98,10 @@ public class ComprasService : IComprasService
     /// <summary>Saca el pago de su cuenta: un Egreso en el libro, enlazado al pago.</summary>
     private async Task PostearPagoAsync(CompraPago pago, string numeroCompra, int? actorId)
     {
-        var metodo = await _finanzas.GetMetodoPagoAsync(pago.MetodoPagoId);
+        // Con saldo a favor no sale plata de ninguna cuenta: baja el saldo con el proveedor.
+        if (pago.SaldoFavor || pago.MetodoPagoId is not int metodoPagoId) return;
+
+        var metodo = await _finanzas.GetMetodoPagoAsync(metodoPagoId);
 
         int cuentaId;
         if (metodo.Tipo == TipoMetodoPago.Efectivo && pago.DesdeBoveda)
@@ -130,9 +133,20 @@ public class ComprasService : IComprasService
         pago.MovimientoCuentaId = movimiento.Id;
     }
 
-    /// <summary>Devuelve a su cuenta lo que este pago sacó, si lo había sacado.</summary>
+    /// <summary>Devuelve a su cuenta lo que este pago sacó, si lo había sacado; si fue con saldo a favor, vuelve al saldo.</summary>
     private async Task ReversarPagoAsync(CompraPago pago, int? actorId)
     {
+        if (pago.SaldoFavor)
+        {
+            if (await _repository.GetMovimientoSaldoDePagoAsync(pago.Id) is { } usado)
+            {
+                usado.Anulado = true;
+                await _repository.GuardarAsync();
+                await _notificador.AvisarAsync("saldosproveedor", "cambio", new { proveedorId = usado.ProveedorId });
+            }
+            return;
+        }
+
         if (pago.MovimientoCuentaId is not int movimientoId) return;
 
         await _cuentas.ReversarAsync(movimientoId, actorId);
@@ -316,12 +330,27 @@ public class ComprasService : IComprasService
 
     public async Task<IEnumerable<CompraResponse>> GetComprasAsync(string? estado = null)
     {
-        var compras = await _repository.GetComprasAsync(estado);
-        return compras.Select(MapCompra);
+        var compras = (await _repository.GetComprasAsync(estado)).Select(MapCompra).ToList();
+        await ConAlmacenDeRecepcionAsync(compras);
+        return compras;
     }
 
-    public async Task<CompraResponse> GetCompraAsync(int id) =>
-        MapCompra(await GetCompraOrThrowAsync(id));
+    public async Task<CompraResponse> GetCompraAsync(int id)
+    {
+        var compra = MapCompra(await GetCompraOrThrowAsync(id));
+        await ConAlmacenDeRecepcionAsync([compra]);
+        return compra;
+    }
+
+    /// <summary>Dónde se recibió cada compra (la última recepción vigente): de ahí sale lo que se le devuelva.</summary>
+    private async Task ConAlmacenDeRecepcionAsync(List<CompraResponse> compras)
+    {
+        var almacenes = await _repository.GetAlmacenRecepcionAsync(compras.Select(c => c.Id));
+        foreach (var c in compras)
+        {
+            c.AlmacenRecepcionId = almacenes.TryGetValue(c.Id, out var almacenId) ? almacenId : null;
+        }
+    }
 
     public Task<CompraResponse> CrearCompraAsync(CrearCompraRequest request, int? usuarioId) =>
         CrearCompraInternaAsync(request, usuarioId, ordenCompraId: null, avisar: true);
@@ -441,6 +470,13 @@ public class ComprasService : IComprasService
                 "Solo se puede editar una compra Pendiente. Si ya tiene mercadería recibida, anula las recepciones primero.");
         }
 
+        // Una devolución bajó las cantidades de sus líneas: reemplazarlas borraría lo devuelto.
+        if (await _repository.TieneDevolucionesVigentesAsync(id))
+        {
+            throw new BadRequestException(
+                "Esta compra tiene devoluciones al proveedor: anúlalas antes de editarla.");
+        }
+
         var lineas = await ResolverLineasAsync(request.Detalle);
         var total = Math.Round(lineas.Sum(l => l.Cantidad * l.CostoUnitario), 2);
         var totalPagado = Math.Round(request.Pagos.Sum(p => p.Monto), 2);
@@ -455,10 +491,17 @@ public class ComprasService : IComprasService
         var actor = _usuarioActual.Id;
         var vigentes = compra.Pagos.Where(p => !p.Anulado).ToList();
         var cambianPagos =
-            FirmaPagos(vigentes.Select(p => (p.MetodoPagoId, p.Monto, p.DesdeBoveda)))
+            FirmaPagos(vigentes.Select(p => (p.MetodoPagoId ?? 0, p.Monto, p.DesdeBoveda)))
             != FirmaPagos(request.Pagos.Select(p => (p.MetodoPagoId, p.Monto, p.DesdeBoveda)));
         if (cambianPagos)
         {
+            // El formulario no sabe de saldo a favor: si se reemplazaran, ese pago se perdería sin volver al saldo.
+            if (vigentes.Any(p => p.SaldoFavor))
+            {
+                throw new BadRequestException(
+                    "Esta compra tiene un pago con saldo a favor: anúlalo antes de cambiar los pagos.");
+            }
+
             await ValidarPuedePagarAsync(request.Pagos, actor);
         }
 
@@ -529,6 +572,12 @@ public class ComprasService : IComprasService
         {
             throw new BadRequestException(
                 "Esta compra ya tiene mercadería recibida: anula las recepciones, no la compra completa.");
+        }
+
+        if (await _repository.TieneDevolucionesVigentesAsync(id))
+        {
+            throw new BadRequestException(
+                "Esta compra tiene devoluciones al proveedor: anúlalas antes de anular la compra.");
         }
 
         // Lo que se le pagó al proveedor vuelve a sus cuentas.
@@ -611,6 +660,12 @@ public class ComprasService : IComprasService
         if (pago.Anulado)
         {
             throw new BadRequestException("Este pago está anulado: no se puede editar.");
+        }
+
+        if (pago.SaldoFavor)
+        {
+            throw new BadRequestException(
+                "Un pago con saldo a favor no se edita: anúlalo (el monto vuelve al saldo) y vuelve a aplicarlo.");
         }
 
         var total = Math.Round(compra.Detalle.Sum(d => d.Cantidad * d.CostoUnitario), 2);
@@ -858,7 +913,8 @@ public class ComprasService : IComprasService
     {
         Id = p.Id,
         MetodoPagoId = p.MetodoPagoId,
-        MetodoPago = p.MetodoPago?.Nombre ?? string.Empty,
+        MetodoPago = p.SaldoFavor ? "Saldo a favor" : p.MetodoPago?.Nombre ?? string.Empty,
+        SaldoFavor = p.SaldoFavor,
         Monto = p.Monto,
         Fecha = p.Fecha,
         Usuario = p.Usuario?.Nombre,

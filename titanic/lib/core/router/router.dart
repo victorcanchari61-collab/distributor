@@ -8,6 +8,7 @@ import '../../features/compras/vistas/mis_compras_pagina.dart';
 import '../../features/compras/vistas/ordenes_compra_pagina.dart';
 import '../../features/compras/vistas/solicitudes_compra_pagina.dart';
 import '../../features/compras/vistas/recepciones_pagina.dart';
+import '../../features/compras/vistas/devoluciones_proveedor_pagina.dart';
 import '../../features/config/vistas/accesos_pagina.dart';
 import '../../features/config/vistas/auditoria_pagina.dart';
 import '../../features/config/vistas/empresas_pagina.dart';
@@ -219,6 +220,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RecepcionesPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: RecepcionesPagina()),
+      ),
+      GoRoute(
+        path: DevolucionesProveedorPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: DevolucionesProveedorPagina()),
       ),
       GoRoute(
         path: AjustesPagina.ruta,
@@ -476,6 +482,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != OrdenesCompraPagina.ruta &&
               item.ruta != MisComprasPagina.ruta &&
               item.ruta != RecepcionesPagina.ruta &&
+              item.ruta != DevolucionesProveedorPagina.ruta &&
               item.ruta != AjustesPagina.ruta &&
               item.ruta != TransferenciasPagina.ruta &&
               item.ruta != PrestamosPagina.ruta &&

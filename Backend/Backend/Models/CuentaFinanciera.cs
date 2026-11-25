@@ -86,11 +86,17 @@ public static class DocumentoOrigenMovimiento
     /// </summary>
     public const string SaldoInicial = "SALDO_INICIAL";
 
+    /// <summary>
+    /// La plata que un proveedor devuelve de un saldo a favor (de una devolución ya pagada): entra a la caja de quien
+    /// la recibe si es efectivo, o a la cuenta del método si no.
+    /// </summary>
+    public const string CobroProveedor = "COBRO_PROVEEDOR";
+
     public static readonly string[] Todos =
     [
         CierreCaja, FaltanteCaja, SobranteCaja, RecuperoFaltante, MovimientoOperativo, TransferenciaInterna,
         Reversion, PagoVenta, PagoCompra, SaldoInicial, Financiamiento, PagoFinanciamiento,
-        AdelantoEmpleado, RecuperoAdelanto,
+        AdelantoEmpleado, RecuperoAdelanto, CobroProveedor,
     ];
 }
 

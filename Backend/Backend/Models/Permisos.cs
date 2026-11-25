@@ -137,6 +137,9 @@ public static class CatalogoPermisos
             ["compras.ordenes"] = DocumentoConfirmable,
             ["compras.compras"] = [.. Documento, Accion.Cobrar],
             ["compras.recepciones"] = Documento,
+            // Lo que se le devuelve al proveedor (llegó mal o no llegó). Cobrar es registrar que devolvió la plata de
+            // un saldo a favor (o anular ese cobro).
+            ["compras.devoluciones"] = [Accion.Ver, Accion.Crear, Accion.Anular, Accion.Cobrar, Accion.Exportar],
 
             // --- Inventario ---
             ["inv.almacenes"] = Catalogo,

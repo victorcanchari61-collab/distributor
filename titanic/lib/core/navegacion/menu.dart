@@ -171,6 +171,12 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Recepciones',
         icono: Icons.check_box_outlined,
       ),
+      MenuItem(
+        id: 'compras.devoluciones',
+        pendiente: false,
+        titulo: 'Devoluciones a proveedor',
+        icono: Icons.assignment_return_outlined,
+      ),
     ],
   ),
   MenuGrupo(

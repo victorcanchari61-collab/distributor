@@ -75,6 +75,7 @@ const VIEWS: Record<string, ComponentType> = {
   'compras.ordenes': pantalla(() => import('./features/compras'), 'OrdenesCompraPage'),
   'compras.compras': pantalla(() => import('./features/compras'), 'MisComprasPage'),
   'compras.recepciones': pantalla(() => import('./features/compras'), 'RecepcionesPage'),
+  'compras.devoluciones': pantalla(() => import('./features/compras'), 'DevolucionesProveedorPage'),
   'tms.mercados': pantalla(() => import('./features/tms'), 'MercadosPage'),
   'tms.rutas': pantalla(() => import('./features/tms'), 'RutasPage'),
   'tms.flota': pantalla(() => import('./features/tms'), 'FlotaPage'),

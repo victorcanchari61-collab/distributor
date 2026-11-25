@@ -62,7 +62,9 @@ public class FinanzasRepository : IFinanzasRepository
 
     public async Task<Dictionary<int, int>> ContarUsosPorMetodoPagoAsync() =>
         await _context.CompraPagos
-            .GroupBy(p => p.MetodoPagoId)
+            // Los pagos con saldo a favor no usan ningún método.
+            .Where(p => p.MetodoPagoId != null)
+            .GroupBy(p => p.MetodoPagoId!.Value)
             .Select(g => new { MetodoPagoId = g.Key, Cantidad = g.Count() })
             .ToDictionaryAsync(x => x.MetodoPagoId, x => x.Cantidad);
 

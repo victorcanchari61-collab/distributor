@@ -271,7 +271,8 @@ class _HojaPagosPagarState extends ConsumerState<_HojaPagosPagar> {
                   _FilaPago(
                     pago: pago,
                     enEdicion: _editando?.id == pago.id,
-                    onEditar: pago.anulado
+                    // Uno con saldo a favor no se edita: se anula (vuelve al saldo).
+                    onEditar: pago.anulado || pago.saldoFavor
                         ? null
                         : () => setState(() {
                             _editando = pago;

@@ -4,6 +4,7 @@ import '../../ventas/estado/ventas_controlador.dart';
 import '../../auth/estado/auth_controlador.dart';
 import '../datos/compra.dart';
 import '../datos/compras_api.dart';
+import '../datos/devolucion_proveedor.dart';
 import '../datos/orden_compra.dart';
 import '../datos/solicitud_compra.dart';
 
@@ -321,3 +322,73 @@ final proveedoresCuentasPorPagarProvider = Provider.autoDispose<List<String>>((
   final valores = todas.map((c) => c.proveedor).toSet().toList()..sort();
   return valores;
 });
+
+// --- Devoluciones a proveedor ---
+
+final busquedaDevolucionesProveedorProvider = StateProvider.autoDispose(
+  (ref) => '',
+);
+
+/// CONFIRMADA, ANULADA o null (todas).
+final estadoDevolucionProveedorFiltroProvider =
+    StateProvider.autoDispose<String?>((ref) => null);
+
+class DevolucionesProveedorControlador
+    extends AsyncNotifier<List<DevolucionProveedor>> {
+  @override
+  Future<List<DevolucionProveedor>> build() =>
+      ref.watch(comprasApiProvider).devolucionesProveedor();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(comprasApiProvider).devolucionesProveedor(),
+    );
+  }
+
+  /// La devolucion cambia la compra (cantidades, lo recibido, el total) y
+  /// puede dejar saldo a favor: esas listas tambien se vuelven a pedir.
+  Future<DevolucionProveedor> crear(Map<String, dynamic> cuerpo) async {
+    final creada = await ref
+        .read(comprasApiProvider)
+        .crearDevolucionProveedor(cuerpo);
+    await recargar();
+    ref.invalidate(comprasProvider);
+    ref.invalidate(saldosFavorProvider);
+    return creada;
+  }
+
+  Future<void> anular(int id) async {
+    await ref.read(comprasApiProvider).anularDevolucionProveedor(id);
+    await recargar();
+    ref.invalidate(comprasProvider);
+    ref.invalidate(saldosFavorProvider);
+  }
+}
+
+final devolucionesProveedorProvider =
+    AsyncNotifierProvider<
+      DevolucionesProveedorControlador,
+      List<DevolucionProveedor>
+    >(DevolucionesProveedorControlador.new);
+
+final devolucionesProveedorFiltradasProvider =
+    Provider.autoDispose<List<DevolucionProveedor>>((ref) {
+      final todas =
+          ref.watch(devolucionesProveedorProvider).valueOrNull ??
+          const <DevolucionProveedor>[];
+      final texto = ref
+          .watch(busquedaDevolucionesProveedorProvider)
+          .trim()
+          .toLowerCase();
+      final estado = ref.watch(estadoDevolucionProveedorFiltroProvider);
+      return todas
+          .where((d) => estado == null || d.estado == estado)
+          .where((d) => texto.isEmpty || d.buscable.contains(texto))
+          .toList();
+    });
+
+/// Los proveedores que deben plata de una devolucion ya pagada.
+final saldosFavorProvider = FutureProvider<List<SaldoFavorProveedor>>(
+  (ref) => ref.watch(comprasApiProvider).saldosFavor(),
+);

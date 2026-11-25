@@ -148,6 +148,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: 'compras.ordenes', label: 'Órdenes de compra', icon: ClipboardList },
       { id: 'compras.compras', label: 'Mis compras', icon: ShoppingBag },
       { id: 'compras.recepciones', label: 'Recepciones', icon: PackageCheck },
+      { id: 'compras.devoluciones', label: 'Devoluciones a proveedor', icon: Undo2 },
     ],
   },
   {

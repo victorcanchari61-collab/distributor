@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { fechaHora, fechaCorta } from '../../lib/fechas'
-import { CalendarClock, CircleCheck, CreditCard, HandCoins, Plus, Receipt } from 'lucide-react'
+import { CalendarClock, CircleCheck, CreditCard, HandCoins, Plus, Receipt, Wallet } from 'lucide-react'
 import { FaCheck, FaHandHoldingDollar, FaPencil, FaRotateLeft, FaXmark } from 'react-icons/fa6'
 import {
   Alert,
@@ -21,7 +21,7 @@ import type { ConsultaTabla, DataTableColumn } from '../../components/ui'
 import { ApiError } from '../../lib/apiClient'
 import { usePermisos } from '../../lib/permisos'
 import { useRealtime } from '../../lib/realtime'
-import { OPCION_BOVEDA, aPagoCompra, compraApi, metodoDePago } from '../compras/comprasApi'
+import { OPCION_BOVEDA, aPagoCompra, compraApi, devolucionProveedorApi, metodoDePago } from '../compras/comprasApi'
 import type { CompraFila, CompraResponse, PagoCompraResponse } from '../compras/comprasApi'
 import type { ResumenCuentas } from '../facturacion/ventasApi'
 import { proveedorApi } from '../maestros'
@@ -78,6 +78,15 @@ export function CuentasPorPagarPage() {
   const [monto, setMonto] = useState('')
   const [guardando, setGuardando] = useState(false)
 
+  /*
+   * Lo que el proveedor de la cuenta abierta debe de una devolución (una compra ya pagada que después se
+   * descontó): se ofrece para pagar esta compra sin mover plata. Y el total de todos, para su tarjeta.
+   */
+  const [saldoProveedor, setSaldoProveedor] = useState(0)
+  const [montoSaldo, setMontoSaldo] = useState('')
+  const [aplicandoSaldo, setAplicandoSaldo] = useState(false)
+  const [saldosFavor, setSaldosFavor] = useState(0)
+
   const { confirmar, dialogo } = useConfirmacion()
 
   /*
@@ -105,12 +114,14 @@ export function CuentasPorPagarPage() {
 
   const cargarApoyo = useCallback(async () => {
     try {
-      const [res, metodos, provs] = await Promise.all([
+      const [res, metodos, provs, saldos] = await Promise.all([
         compraApi.resumenCuentasPorPagar(),
         opcional(metodoPagoApi.getAll(), []),
         opcional(proveedorApi.getAll(), []),
+        opcional(devolucionProveedorApi.saldos(), []),
       ])
       setResumen(res)
+      setSaldosFavor(saldos.reduce((t, x) => t + x.saldo, 0))
       setMetodosPago(metodos.filter((m) => m.activo))
       setProveedores(provs)
     } catch (e) {
@@ -126,7 +137,7 @@ export function CuentasPorPagarPage() {
     void cargarApoyo()
   }, [cargarApoyo])
 
-  useRealtime(['compras'], cargar)
+  useRealtime(['compras', 'saldosproveedor'], cargar)
 
   // Trae la lista fresca y, con ella, la cuenta que se está gestionando: si ya
   // no aparece (se saldó por completo) el modal se cierra solo.
@@ -135,6 +146,12 @@ export function CuentasPorPagarPage() {
    * lista: con paginacion solo estaria si cayo en la pagina visible, y el
    * modal se cerraria por error creyendo que se saldó.
    */
+  const cargarSaldoProveedor = useCallback(async (compra: CompraResponse) => {
+    const { saldo: aFavor } = await opcional(devolucionProveedorApi.saldo(compra.proveedorId), { proveedorId: 0, saldo: 0 })
+    setSaldoProveedor(aFavor)
+    setMontoSaldo(Math.min(aFavor, Math.max(0, saldo(compra))).toFixed(2))
+  }, [])
+
   const refrescar = useCallback(
     async (id: number) => {
       await Promise.all([
@@ -145,8 +162,9 @@ export function CuentasPorPagarPage() {
       const compra = await compraApi.getById(id)
       // Saldada por completo: ya no es una cuenta pendiente, el modal se cierra.
       setGestionando(compra.total - compra.totalPagado > 0 ? compra : null)
+      await cargarSaldoProveedor(compra)
     },
-    [consulta, cargarPagina, cargarApoyo],
+    [consulta, cargarPagina, cargarApoyo, cargarSaldoProveedor],
   )
 
   const cancelarEdicion = () => {
@@ -159,10 +177,29 @@ export function CuentasPorPagarPage() {
   // La fila no trae los pagos: se pide la compra completa al abrir.
   const abrirGestion = async (c: CompraFila) => {
     try {
-      setGestionando(await compraApi.getById(c.id))
+      const compra = await compraApi.getById(c.id)
+      setGestionando(compra)
       cancelarEdicion()
+      await cargarSaldoProveedor(compra)
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la cuenta.')
+    }
+  }
+
+  const aplicarSaldo = async () => {
+    if (!gestionando) return
+    const valor = Number(montoSaldo)
+    if (!valor || valor <= 0) return toast.error('Ingresa cuánto del saldo a favor usar.')
+    setAplicandoSaldo(true)
+    try {
+      await compraApi.aplicarSaldo(gestionando.id, valor)
+      await refrescar(gestionando.id)
+      await cargar()
+      toast.exito(`Se usaron S/ ${valor.toFixed(2)} del saldo a favor`)
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'No pudimos usar el saldo a favor.')
+    } finally {
+      setAplicandoSaldo(false)
     }
   }
 
@@ -282,7 +319,7 @@ export function CuentasPorPagarPage() {
     ? [
         ...gestionando.pagos.map((p) => ({ ...p, clave: String(p.id) })),
         ...(editandoClave === NUEVA
-          ? [{ id: 0, clave: NUEVA, fecha: '', metodoPagoId: 0, metodoPago: '', monto: 0, usuario: null, anulado: false, desdeBoveda: false }]
+          ? [{ id: 0, clave: NUEVA, fecha: '', metodoPagoId: 0, metodoPago: '', monto: 0, usuario: null, anulado: false, desdeBoveda: false, saldoFavor: false }]
           : []),
       ]
     : []
@@ -310,6 +347,8 @@ export function CuentasPorPagarPage() {
             />
           )
         }
+        // Con saldo a favor no se usó ningún método: se pagó con lo que el proveedor debía de una devolución.
+        if (fila.saldoFavor) return <Badge tone={fila.anulado ? 'neutral' : 'success'}>Saldo a favor</Badge>
         const tipoFila = metodosPago.find((m) => m.id === fila.metodoPagoId)?.tipo
         return tipoFila ? (
           <Badge tone={fila.anulado ? 'neutral' : 'sys'}>{NOTA_TIPO[tipoFila]}</Badge>
@@ -418,6 +457,15 @@ export function CuentasPorPagarPage() {
             tono="success"
             progreso={totalFacturado > 0 ? totalPagadoDeEstas / totalFacturado : 0}
           />
+          {saldosFavor > 0 && (
+            <StatCard
+              label="Saldo a favor"
+              value={`S/ ${saldosFavor.toFixed(2)}`}
+              icon={<Wallet size={18} />}
+              tono="success"
+              progreso={1}
+            />
+          )}
           <StatCard
             label="Cuenta más antigua"
             value={cuentas.length ? `${diasMasAntigua} día${diasMasAntigua === 1 ? '' : 's'}` : '—'}
@@ -477,6 +525,27 @@ export function CuentasPorPagarPage() {
               ]}
             />
 
+            {/* El proveedor debe plata de una devolución: se puede usar para pagar esta compra, sin mover plata. */}
+            {saldoProveedor > 0 && saldo(gestionando) > 0 && (
+              <div className="flex flex-wrap items-end gap-2 rounded-field border border-emerald-200 bg-emerald-50 px-3 py-2">
+                <p className="min-w-[12rem] flex-1 text-sm text-emerald-800">
+                  {gestionando.proveedor} te debe <span className="font-semibold">S/ {saldoProveedor.toFixed(2)}</span> de una
+                  devolución. Puedes usarlo para pagar esta compra.
+                </p>
+                <div className="w-32">
+                  <Input size="sm" type="number" step="0.01" min={0} value={montoSaldo} onChange={(e) => setMontoSaldo(e.target.value)} />
+                </div>
+                <Button
+                  size="sm"
+                  loading={aplicandoSaldo}
+                  disabled={editandoClave !== null}
+                  onClick={() => void aplicarSaldo()}
+                  sinPermiso={!puede('compras.compras', 'cobrar')}>
+                  Usar saldo
+                </Button>
+              </div>
+            )}
+
             <p className="text-sm font-semibold text-ink">Pagos</p>
 
             <SysDataTable<FilaPago>
@@ -502,6 +571,8 @@ export function CuentasPorPagarPage() {
                   </>
                 ) : fila.anulado ? null : (
                   <>
+                    {/* Un pago con saldo a favor no se edita: se anula (vuelve al saldo) y se vuelve a aplicar. */}
+                    {!fila.saldoFavor && (
                     <RowAction
                       label={`Editar pago de S/ ${fila.monto.toFixed(2)}`}
                       tone="edit"
@@ -510,6 +581,7 @@ export function CuentasPorPagarPage() {
                       sinPermiso={!puede('finanzas.pagar', 'cobrar')}>
                       <FaPencil size={15} />
                     </RowAction>
+                    )}
                     <RowAction
                       label={`Anular pago de S/ ${fila.monto.toFixed(2)}`}
                       tone="danger"

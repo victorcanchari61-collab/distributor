@@ -168,6 +168,9 @@ public static class TipoDocumentoInventario
     /// donde se compró. Ver <see cref="RecojoVenta"/>.
     /// </summary>
     public const string Recojo = "RECOJO";
+
+    /// <summary>Mercadería de una compra que se le devuelve al proveedor. AlmacenId es de donde sale.</summary>
+    public const string DevolucionProveedor = "DEVOLUCION_PROVEEDOR";
 }
 
 /// <summary>

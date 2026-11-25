@@ -129,10 +129,13 @@ class PagoCompra {
     this.usuario,
     this.anulado = false,
     this.desdeBoveda = false,
+    this.saldoFavor = false,
   });
 
   final int id;
-  final int metodoPagoId;
+
+  /// Null si se pago con saldo a favor ([saldoFavor]).
+  final int? metodoPagoId;
   final String metodoPago;
   final double monto;
   final DateTime fecha;
@@ -143,15 +146,20 @@ class PagoCompra {
   /// que trae es el Efectivo del catalogo, asi que solo esto lo distingue.
   final bool desdeBoveda;
 
+  /// Se pago con el saldo a favor que se tenia con el proveedor (de una
+  /// devolucion): no salio plata de ninguna cuenta. No se edita: se anula.
+  final bool saldoFavor;
+
   /// El valor del selector de metodo: la Boveda vuelve a ser su opcion.
-  int get metodoElegido => desdeBoveda ? PagoBoveda.id : metodoPagoId;
+  int get metodoElegido => desdeBoveda ? PagoBoveda.id : metodoPagoId ?? 0;
 
   /// Como se lee el metodo: "Bóveda" y no "Efectivo" si salio de ahi.
-  String get nombreMetodo => desdeBoveda ? PagoBoveda.nombre : metodoPago;
+  String get nombreMetodo =>
+      saldoFavor ? 'Saldo a favor' : desdeBoveda ? PagoBoveda.nombre : metodoPago;
 
   factory PagoCompra.desdeJson(Map<String, dynamic> json) => PagoCompra(
     id: json['id'] as int,
-    metodoPagoId: json['metodoPagoId'] as int,
+    metodoPagoId: json['metodoPagoId'] as int?,
     metodoPago: json['metodoPago'] as String? ?? '',
     monto: (json['monto'] as num?)?.toDouble() ?? 0,
     fecha: fechaDeJson(json['fecha'] as String),
@@ -159,6 +167,7 @@ class PagoCompra {
     anulado: json['anulado'] as bool? ?? false,
     // Un servidor anterior no lo manda: entonces nada salio de la Boveda.
     desdeBoveda: json['desdeBoveda'] as bool? ?? false,
+    saldoFavor: json['saldoFavor'] as bool? ?? false,
   );
 }
 
@@ -183,6 +192,7 @@ class Compra {
     required this.detalle,
     required this.pagos,
     required this.totalPagado,
+    this.almacenRecepcionId,
   });
 
   final int id;
@@ -218,6 +228,9 @@ class Compra {
   /// Suma de pagos. Si es menor que total, falta esa diferencia por pagar.
   final double totalPagado;
 
+  /// Donde se recibio (la ultima recepcion vigente). Null si no llego nada.
+  final int? almacenRecepcionId;
+
   String get buscable =>
       '$numero $proveedor ${numeroComprobante ?? ''}'.toLowerCase();
 
@@ -245,5 +258,6 @@ class Compra {
         .map((e) => PagoCompra.desdeJson(e as Map<String, dynamic>))
         .toList(),
     totalPagado: (json['totalPagado'] as num?)?.toDouble() ?? 0,
+    almacenRecepcionId: json['almacenRecepcionId'] as int?,
   );
 }

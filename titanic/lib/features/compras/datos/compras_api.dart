@@ -1,5 +1,6 @@
 import '../../../core/red/cliente_api.dart';
 import 'compra.dart';
+import 'devolucion_proveedor.dart';
 import 'orden_compra.dart';
 import 'solicitud_compra.dart';
 
@@ -169,4 +170,51 @@ class ComprasApi {
   Future<Compra> anularPagoCompra(int id, int pagoId) async => Compra.desdeJson(
     await _api.delete('/compra/$id/pagos/$pagoId') as Map<String, dynamic>,
   );
+
+  /// POST /api/compra/{id}/saldo-favor — paga con el saldo a favor que se
+  /// tiene con el proveedor: no mueve plata.
+  Future<Compra> aplicarSaldoFavor(int id, double monto) async =>
+      Compra.desdeJson(
+        await _api.post('/compra/$id/saldo-favor', cuerpo: {'monto': monto})
+            as Map<String, dynamic>,
+      );
+
+  // --- Devoluciones a proveedor ---
+
+  /// GET /api/devolucion-proveedor — las mas nuevas primero.
+  Future<List<DevolucionProveedor>> devolucionesProveedor() async {
+    final datos = await _api.get('/devolucion-proveedor') as List;
+    return datos
+        .map((e) => DevolucionProveedor.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// POST /api/devolucion-proveedor
+  Future<DevolucionProveedor> crearDevolucionProveedor(
+    Map<String, dynamic> cuerpo,
+  ) async => DevolucionProveedor.desdeJson(
+    await _api.post('/devolucion-proveedor', cuerpo: cuerpo)
+        as Map<String, dynamic>,
+  );
+
+  /// PATCH /api/devolucion-proveedor/{id}/anular
+  Future<void> anularDevolucionProveedor(int id) async {
+    await _api.patch('/devolucion-proveedor/$id/anular');
+  }
+
+  /// GET /api/devolucion-proveedor/saldos — los proveedores que deben plata.
+  Future<List<SaldoFavorProveedor>> saldosFavor() async {
+    final datos = await _api.get('/devolucion-proveedor/saldos') as List;
+    return datos
+        .map((e) => SaldoFavorProveedor.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// GET /api/devolucion-proveedor/saldos/{proveedorId}
+  Future<double> saldoFavor(int proveedorId) async {
+    final datos =
+        await _api.get('/devolucion-proveedor/saldos/$proveedorId')
+            as Map<String, dynamic>;
+    return (datos['saldo'] as num?)?.toDouble() ?? 0;
+  }
 }

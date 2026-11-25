@@ -79,4 +79,40 @@ public interface IComprasRepository
 
     /// <summary>Reemplaza los pagos de una compra Pendiente, igual que sus líneas.</summary>
     Task ReemplazarPagosCompraAsync(int compraId, IEnumerable<CompraPago> pagos);
+
+    /// <summary>Por compra, el almacén de su última recepción vigente.</summary>
+    Task<Dictionary<int, int>> GetAlmacenRecepcionAsync(IEnumerable<int> compraIds);
+
+    // --- Devoluciones a proveedor ---
+    Task<string> SiguienteNumeroDevolucionAsync();
+    Task AddDevolucionAsync(DevolucionProveedor devolucion);
+
+    /// <summary>Con su detalle, la compra, el proveedor, el almacén y quién la registró.</summary>
+    Task<DevolucionProveedor?> GetDevolucionAsync(int id);
+
+    /// <summary>Las devoluciones, las más nuevas primero; de una compra si se indica.</summary>
+    Task<List<DevolucionProveedor>> GetDevolucionesAsync(int? compraId = null);
+
+    /// <summary>Si la compra tiene alguna devolución sin anular: no se puede editar ni anular entera.</summary>
+    Task<bool> TieneDevolucionesVigentesAsync(int compraId);
+
+    // --- Saldo a favor con proveedores ---
+    Task AddMovimientoSaldoAsync(MovimientoSaldoProveedor movimiento);
+
+    /// <summary>Lo que el proveedor debe devolver: lo generado menos lo cobrado y lo aplicado, sin lo anulado.</summary>
+    Task<decimal> SaldoFavorAsync(int proveedorId);
+
+    /// <summary>Los proveedores con saldo a favor, con cuánto.</summary>
+    Task<List<SaldoFavorProveedorResponse>> SaldosFavorAsync();
+
+    /// <summary>El libro de un proveedor, lo más nuevo primero.</summary>
+    Task<List<MovimientoSaldoProveedor>> GetMovimientosSaldoAsync(int proveedorId);
+
+    Task<MovimientoSaldoProveedor?> GetMovimientoSaldoAsync(int id);
+
+    /// <summary>El movimiento con el que un pago usó el saldo a favor.</summary>
+    Task<MovimientoSaldoProveedor?> GetMovimientoSaldoDePagoAsync(int compraPagoId);
+
+    /// <summary>El saldo a favor que generó una devolución, si generó.</summary>
+    Task<MovimientoSaldoProveedor?> GetMovimientoSaldoDeDevolucionAsync(int devolucionId);
 }

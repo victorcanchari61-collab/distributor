@@ -118,6 +118,20 @@ public interface IInventarioService
     Task<DocumentoInventarioResponse> CrearRecepcionAsync(
         CrearRecepcionRequest request, int? usuarioId);
 
+    /// <summary>
+    /// Saca del stock lo que se le devuelve al proveedor de una compra, con motivo del sistema "Devolución a
+    /// proveedor". Sale primero de las capas que creó la recepción de esa compra (al costo pactado); si ya se vendió
+    /// parte, el resto sale del stock general del almacén, como cualquier salida. Anularlo (AnularAsync) lo devuelve a
+    /// las mismas capas.
+    /// </summary>
+    Task<DocumentoInventario> CrearDevolucionProveedorAsync(
+        string numeroDevolucion,
+        Compra compra,
+        int almacenId,
+        IReadOnlyList<(CompraDetalle Detalle, decimal Cantidad)> lineas,
+        DateTime fecha,
+        int? usuarioId);
+
     // --- Ventas ---
 
     /// <summary>

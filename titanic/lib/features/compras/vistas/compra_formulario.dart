@@ -147,7 +147,10 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
   }
 
   late final List<_FilaPago> _pagos = [
+    // Los pagos con saldo a favor no son de ningun metodo: el formulario no los
+    // maneja (se anulan aparte).
     for (final p in widget.compra?.pagos ?? const [])
+      if (!p.saldoFavor)
       _FilaPago(
         // Uno que salio de la Boveda vuelve a ser la opcion Boveda.
         metodoPagoId: p.metodoElegido,

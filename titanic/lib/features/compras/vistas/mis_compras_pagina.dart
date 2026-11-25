@@ -24,6 +24,7 @@ import '../../../core/tema/colores.dart';
 import '../datos/compra.dart';
 import '../estado/compras_controlador.dart';
 import 'compra_formulario.dart';
+import 'devolucion_proveedor_formulario.dart';
 import 'recepcion_formulario.dart';
 import '../../../compartido/widgets/app_aviso.dart';
 
@@ -165,6 +166,18 @@ class MisComprasPagina extends ConsumerWidget {
             ? permitir(
                 puede(ref, 'compras.recepciones', Accion.crear),
                 () => _recibir(context, compra),
+              )
+            : null,
+        // Lo que llego mal o no llego: se repone o se descuenta.
+        onDevolver: compra.estado != EstadoCompra.anulada
+            ? permitir(
+                puede(ref, 'compras.devoluciones', Accion.crear),
+                () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        DevolucionProveedorFormulario(compraFija: compra),
+                  ),
+                ),
               )
             : null,
         onAnular: compra.estado == EstadoCompra.pendiente
@@ -312,6 +325,7 @@ class _TarjetaCompra extends StatelessWidget {
     required this.color,
     this.onEditar,
     this.onRecibir,
+    this.onDevolver,
     this.onAnular,
   });
 
@@ -319,6 +333,7 @@ class _TarjetaCompra extends StatelessWidget {
   final Color color;
   final VoidCallback? onEditar;
   final VoidCallback? onRecibir;
+  final VoidCallback? onDevolver;
   final VoidCallback? onAnular;
 
   List<CampoDetalle> get _campos => [
@@ -422,6 +437,13 @@ class _TarjetaCompra extends StatelessWidget {
           motivo: compra.estado == EstadoCompra.anulada
               ? 'Está anulada'
               : 'Ya se recibió completa',
+        ),
+        AppBotonFila(
+          icono: Icons.assignment_return_outlined,
+          etiqueta: 'Devolver al proveedor de ${compra.numero}',
+          tono: TonoAccion.aviso,
+          onPressed: onDevolver,
+          motivo: 'Está anulada',
         ),
         AppBotonFila(
           icono: Icons.undo,

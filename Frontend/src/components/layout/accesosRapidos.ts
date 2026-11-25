@@ -65,6 +65,7 @@ export const ACCESOS_RAPIDOS: Record<string, AccesoRapido[]> = {
   'compras.ordenes': [crear('Nueva orden')],
   'compras.compras': [crear('Nueva compra')],
   'compras.recepciones': [crear('Nueva recepción')],
+  'compras.devoluciones': [crear('Nueva devolución', { pestana: 'Devoluciones' })],
 
   'inv.almacenes': [crear('Nuevo almacén')],
   'inv.ajustes': [crear('Nuevo ajuste', { pestana: 'Ajustes' }), crear('Nuevo motivo', { pestana: 'Motivos' })],

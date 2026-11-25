@@ -1138,11 +1138,7 @@ public class InventarioService : IInventarioService
                     if (detalle?.Compra is not null)
                     {
                         detalle.CantidadRecibida -= m.Cantidad;
-                        detalle.Compra.Estado = detalle.Compra.Detalle.All(d => d.CantidadRecibida <= 0)
-                            ? EstadoCompra.Pendiente
-                            : detalle.Compra.Detalle.All(d => d.CantidadRecibida >= d.Cantidad)
-                                ? EstadoCompra.RecibidaTotal
-                                : EstadoCompra.RecibidaParcial;
+                        detalle.Compra.Estado = EstadoCompra.SegunLoRecibido(detalle.Compra.Detalle);
                         await _compras.GuardarAsync();
                     }
                 }
@@ -1317,9 +1313,7 @@ public class InventarioService : IInventarioService
             detalle.CantidadRecibida += linea.Cantidad;
         }
 
-        compra.Estado = compra.Detalle.All(d => d.CantidadRecibida >= d.Cantidad)
-            ? EstadoCompra.RecibidaTotal
-            : EstadoCompra.RecibidaParcial;
+        compra.Estado = EstadoCompra.SegunLoRecibido(compra.Detalle);
         await _compras.UpdateCompraAsync(compra);
 
         await transaccion.CommitAsync();
@@ -1330,6 +1324,109 @@ public class InventarioService : IInventarioService
         await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
         await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
         return creada;
+    }
+
+    // ------------------------------------------------ Devoluciones a proveedor
+
+    public async Task<DocumentoInventario> CrearDevolucionProveedorAsync(
+        string numeroDevolucion,
+        Compra compra,
+        int almacenId,
+        IReadOnlyList<(CompraDetalle Detalle, decimal Cantidad)> lineas,
+        DateTime fecha,
+        int? usuarioId)
+    {
+        var almacen = await GetAlmacenOrThrowAsync(almacenId);
+        if (!almacen.Activo) throw new BadRequestException("El almacén está desactivado");
+
+        var motivo = await GetMotivoOrThrowAsync(Motivos.DevolucionProveedor);
+
+        var documento = new DocumentoInventario
+        {
+            Numero = await _repository.SiguienteNumeroAsync(TipoDocumentoInventario.DevolucionProveedor),
+            Tipo = TipoDocumentoInventario.DevolucionProveedor,
+            AlmacenId = almacen.Id,
+            MotivoId = motivo.Id,
+            CompraId = compra.Id,
+            Fecha = fecha,
+            Estado = EstadoDocumento.Confirmado,
+            Observacion = $"Devolución {numeroDevolucion} de la compra {compra.Numero}",
+            UsuarioId = usuarioId
+        };
+
+        await using var transaccion = await _repository.IniciarTransaccionAsync();
+
+        await _repository.AddDocumentoAsync(documento);
+        await _repository.GuardarAsync();
+
+        foreach (var (detalle, cantidad) in lineas)
+        {
+            var producto = await _productos.GetConDetalleAsync(detalle.ProductoId)
+                ?? throw new BadRequestException($"No existe el producto {detalle.ProductoId}");
+
+            // Sin CompraDetalleId a propósito: ese enlace dice "esto entró por la compra", y anular este documento
+            // tocaría lo recibido de la línea. Lo que se devuelve lo lleva la devolución, no el movimiento.
+            var movimiento = new MovimientoInventario
+            {
+                DocumentoId = documento.Id,
+                ProductoId = producto.Id,
+                AlmacenId = almacen.Id,
+                MotivoId = motivo.Id,
+                Tipo = motivo.Tipo,
+                PresentacionId = detalle.PresentacionId,
+                CantidadPresentacion = cantidad,
+                Cantidad = cantidad,
+                Fecha = fecha
+            };
+
+            await _repository.AddDocumentoMovimientoAsync(movimiento);
+            await _repository.GuardarAsync();
+
+            // Bloqueadas (FOR UPDATE), y primero las que creó la recepción de esta línea: lo que se devuelve es lo
+            // que entró por esta compra, a su costo. Si ya se vendió parte, sigue por las más antiguas del almacén.
+            var deLaCompra = await _repository.GetMovimientosRecepcionDeLineaAsync(detalle.Id);
+            var capas = (await _repository.GetCapasParaConsumirAsync(producto.Id, almacen.Id))
+                .OrderBy(c => deLaCompra.Contains(c.MovimientoId) ? 0 : 1)
+                .ToList();
+
+            var disponible = capas.Sum(c => c.CantidadDisponible);
+            if (disponible < cantidad)
+            {
+                throw new BadRequestException(
+                    $"'{producto.Nombre}': se quieren devolver {cantidad} {producto.UnidadBase?.Codigo} y en "
+                    + $"{almacen.Nombre} quedan {disponible}.");
+            }
+
+            var restante = cantidad;
+            decimal costoTotal = 0;
+            foreach (var capa in capas)
+            {
+                if (restante <= 0) break;
+
+                var tomado = Math.Min(capa.CantidadDisponible, restante);
+                restante -= tomado;
+                capa.CantidadDisponible -= tomado;
+                costoTotal += tomado * capa.CostoUnitario;
+
+                await _repository.AddConsumoAsync(new ConsumoCapa
+                {
+                    MovimientoId = movimiento.Id,
+                    CapaId = capa.Id,
+                    Cantidad = tomado,
+                    CostoUnitario = capa.CostoUnitario
+                });
+            }
+
+            movimiento.CostoTotal = Math.Round(costoTotal, 4);
+            movimiento.CostoUnitario = cantidad == 0 ? 0 : Math.Round(costoTotal / cantidad, 4);
+            await _repository.GuardarAsync();
+        }
+
+        await transaccion.CommitAsync();
+
+        await _notificador.AvisarAsync("stock", "cambio", new { almacenId = almacen.Id });
+        await _notificador.AvisarAsync("kardex", "cambio", new { almacenId = almacen.Id });
+        return documento;
     }
 
     // ------------------------------------------------------------------ Ventas

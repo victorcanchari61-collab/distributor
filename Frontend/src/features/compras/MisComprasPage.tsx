@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
 import { ArrowLeft, Ban, Building2, PackageCheck, Plus, ShoppingBag } from 'lucide-react'
-import { FaBoxOpen, FaCheck, FaEye, FaPencil, FaRotateLeft, FaTrash, FaXmark } from 'react-icons/fa6'
+import { FaArrowRotateLeft, FaBoxOpen, FaCheck, FaEye, FaPencil, FaRotateLeft, FaTrash, FaXmark } from 'react-icons/fa6'
 import {
   AccionPdf,
   AgregarProductoPanel,
@@ -57,6 +57,7 @@ import type {
   TipoComprobanteCompra,
 } from './comprasApi'
 import { NuevaRecepcionModal } from './NuevaRecepcionModal'
+import { NuevaDevolucionModal } from './NuevaDevolucionModal'
 
 import { opcional } from '../../lib/apoyo'
 const TIPOS_COMPROBANTE: { value: TipoComprobanteCompra; label: string }[] = [
@@ -161,6 +162,8 @@ export function MisComprasPage() {
   const [convirtiendo, setConvirtiendo] = useState<OrdenCompraResponse | null>(null)
   const [detalleAbierto, setDetalleAbierto] = useState<CompraResponse | null>(null)
   const [recepcionAbierta, setRecepcionAbierta] = useState<CompraResponse | null>(null)
+  /** La compra de la que se devuelve algo al proveedor (lo que llegó mal o no llegó). */
+  const [devolviendo, setDevolviendo] = useState<CompraResponse | null>(null)
   const [buscadorAbierto, setBuscadorAbierto] = useState(false)
   const [pagosAbierto, setPagosAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -285,7 +288,8 @@ export function MisComprasPage() {
     setSerieComprobante(compra.serieComprobante ?? '')
     setNumeroComprobante(compra.numeroComprobante ?? '')
     setFormaPago(compra.formaPago)
-    setPagos(compra.pagos.map((p) => ({ metodoPagoId: metodoDePago(p), monto: String(p.monto) })))
+    // Los pagos con saldo a favor no son de ningún método: el formulario no los maneja (se anulan aparte).
+    setPagos(compra.pagos.filter((p) => !p.saldoFavor).map((p) => ({ metodoPagoId: metodoDePago(p), monto: String(p.monto) })))
     setPagoTipo('')
     setPagoMetodoId(0)
     setPagoMonto('')
@@ -1069,7 +1073,7 @@ export function MisComprasPage() {
       cardIcon={ShoppingBag}
       searchPlaceholder="Buscar por número, proveedor..."
       empty={cargando ? 'Cargando compras...' : 'Todavía no hay compras registradas.'}
-      actionsWidth={180}
+      actionsWidth={215}
       rowActions={(row) => (
         <>
           <RowAction label={`Ver ${row.numero}`} tone="view" onClick={() => void conCompraCompleta(row.id, setDetalleAbierto)}>
@@ -1099,6 +1103,16 @@ export function MisComprasPage() {
             onClick={() => void conCompraCompleta(row.id, setRecepcionAbierta)}
             sinPermiso={!puede('compras.recepciones', 'crear')}>
             <FaBoxOpen size={15} />
+          </RowAction>
+          {/* Lo que llegó mal o no llegó: se repone o se descuenta (ver Devoluciones a proveedor). */}
+          <RowAction
+            label={`Devolver al proveedor de ${row.numero}`}
+            tone="warning"
+            disabled={row.estado === 'ANULADA'}
+            disabledReason="Está anulada"
+            onClick={() => void conCompraCompleta(row.id, setDevolviendo)}
+            sinPermiso={!puede('compras.devoluciones', 'crear')}>
+            <FaArrowRotateLeft size={15} />
           </RowAction>
           <RowAction
             label={`Anular ${row.numero}`}
@@ -1178,6 +1192,15 @@ export function MisComprasPage() {
         onClose={() => setRecepcionAbierta(null)}
         compraFija={recepcionAbierta}
         compras={comprasParaRecibir}
+        almacenes={almacenes}
+        onCreada={() => void cargar()}
+      />
+
+      <NuevaDevolucionModal
+        open={devolviendo !== null}
+        onClose={() => setDevolviendo(null)}
+        compraFija={devolviendo}
+        compras={[]}
         almacenes={almacenes}
         onCreada={() => void cargar()}
       />

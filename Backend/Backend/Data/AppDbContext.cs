@@ -67,6 +67,9 @@ public class AppDbContext : DbContext
     public DbSet<Compra> Compras => Set<Compra>();
     public DbSet<CompraDetalle> CompraDetalles => Set<CompraDetalle>();
     public DbSet<CompraPago> CompraPagos => Set<CompraPago>();
+    public DbSet<DevolucionProveedor> DevolucionesProveedor => Set<DevolucionProveedor>();
+    public DbSet<DevolucionProveedorDetalle> DevolucionProveedorDetalles => Set<DevolucionProveedorDetalle>();
+    public DbSet<MovimientoSaldoProveedor> MovimientosSaldoProveedor => Set<MovimientoSaldoProveedor>();
     public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
     public DbSet<PedidoDetalle> PedidoDetalles => Set<PedidoDetalle>();
@@ -1316,6 +1319,72 @@ public class AppDbContext : DbContext
 
             entity.HasOne<MovimientoCuenta>().WithMany()
                 .HasForeignKey(p => p.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DevolucionProveedor>(entity =>
+        {
+            entity.ToTable("DevolucionesProveedor");
+            entity.HasIndex(d => d.Numero).IsUnique();
+            entity.HasIndex(d => d.Fecha);
+            entity.HasIndex(d => d.Estado);
+            entity.Property(d => d.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Estado).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Motivo).HasMaxLength(150).IsRequired();
+            entity.Property(d => d.Observacion).HasMaxLength(250);
+            entity.Property(d => d.SerieNotaCredito).HasMaxLength(10);
+            entity.Property(d => d.NumeroNotaCredito).HasMaxLength(20);
+            entity.Property(d => d.MontoDescuento).HasPrecision(18, 2);
+            entity.Property(d => d.SaldoFavorGenerado).HasPrecision(18, 2);
+
+            entity.HasOne(d => d.Compra).WithMany()
+                .HasForeignKey(d => d.CompraId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Proveedor).WithMany()
+                .HasForeignKey(d => d.ProveedorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Almacen).WithMany()
+                .HasForeignKey(d => d.AlmacenId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.DocumentoInventario).WithMany()
+                .HasForeignKey(d => d.DocumentoInventarioId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Usuario).WithMany()
+                .HasForeignKey(d => d.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DevolucionProveedorDetalle>(entity =>
+        {
+            entity.ToTable("DevolucionProveedorDetalles");
+            entity.Property(d => d.Cantidad).HasPrecision(18, 4);
+            entity.Property(d => d.CostoUnitario).HasPrecision(18, 4);
+            entity.Property(d => d.CantidadPresentacionDescontada).HasPrecision(18, 4);
+            entity.Property(d => d.Origen).HasMaxLength(20).IsRequired();
+            entity.Property(d => d.Resolucion).HasMaxLength(20).IsRequired();
+
+            entity.HasOne(d => d.DevolucionProveedor).WithMany(d => d.Detalle)
+                .HasForeignKey(d => d.DevolucionProveedorId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.CompraDetalle).WithMany()
+                .HasForeignKey(d => d.CompraDetalleId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Producto).WithMany()
+                .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MovimientoSaldoProveedor>(entity =>
+        {
+            entity.ToTable("MovimientosSaldoProveedor");
+            entity.HasIndex(m => new { m.ProveedorId, m.Fecha });
+            entity.Property(m => m.Tipo).HasMaxLength(20).IsRequired();
+            entity.Property(m => m.Monto).HasPrecision(18, 2);
+            entity.Property(m => m.Observacion).HasMaxLength(250);
+
+            entity.HasOne(m => m.Proveedor).WithMany()
+                .HasForeignKey(m => m.ProveedorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.DevolucionProveedor).WithMany()
+                .HasForeignKey(m => m.DevolucionProveedorId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.CompraPago).WithMany()
+                .HasForeignKey(m => m.CompraPagoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.MetodoPago).WithMany()
+                .HasForeignKey(m => m.MetodoPagoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MovimientoCuenta>().WithMany()
+                .HasForeignKey(m => m.MovimientoCuentaId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(m => m.Usuario).WithMany()
+                .HasForeignKey(m => m.UsuarioId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 

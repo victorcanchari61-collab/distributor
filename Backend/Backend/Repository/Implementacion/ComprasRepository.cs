@@ -453,4 +453,142 @@ public class ComprasRepository : IComprasRepository
         await _context.CompraPagos.AddRangeAsync(pagos);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<Dictionary<int, int>> GetAlmacenRecepcionAsync(IEnumerable<int> compraIds)
+    {
+        var ids = compraIds.ToList();
+        if (ids.Count == 0) return [];
+
+        var filas = await _context.DocumentosInventario
+            .Where(d => d.Tipo == TipoDocumentoInventario.Recepcion
+                        && d.Estado == EstadoDocumento.Confirmado
+                        && d.CompraId != null
+                        && ids.Contains(d.CompraId.Value))
+            .Select(d => new { CompraId = d.CompraId!.Value, d.AlmacenId, d.Id })
+            .ToListAsync();
+
+        return filas
+            .GroupBy(f => f.CompraId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(f => f.Id).First().AlmacenId);
+    }
+
+    // -------------------------------------------------- Devoluciones a proveedor
+
+    public async Task<string> SiguienteNumeroDevolucionAsync()
+    {
+        var ultimo = await _context.DevolucionesProveedor
+            .OrderByDescending(d => d.Id)
+            .Select(d => d.Numero)
+            .FirstOrDefaultAsync();
+
+        var correlativo = 1;
+        if (ultimo is not null && int.TryParse(ultimo.Split('-').Last(), out var n))
+        {
+            correlativo = n + 1;
+        }
+
+        return $"DVP-{correlativo:D4}";
+    }
+
+    public async Task AddDevolucionAsync(DevolucionProveedor devolucion)
+    {
+        await _context.DevolucionesProveedor.AddAsync(devolucion);
+        await _context.SaveChangesAsync();
+    }
+
+    private IQueryable<DevolucionProveedor> DevolucionesConDetalle() =>
+        _context.DevolucionesProveedor
+            .Include(d => d.Compra)
+            .Include(d => d.Proveedor)
+            .Include(d => d.Almacen)
+            .Include(d => d.Usuario)
+            .Include(d => d.DocumentoInventario)
+            .Include(d => d.Detalle).ThenInclude(l => l.Producto).ThenInclude(p => p!.UnidadBase)
+            .Include(d => d.Detalle).ThenInclude(l => l.CompraDetalle).ThenInclude(c => c!.Presentacion);
+
+    public async Task<DevolucionProveedor?> GetDevolucionAsync(int id) =>
+        await DevolucionesConDetalle().FirstOrDefaultAsync(d => d.Id == id);
+
+    public async Task<List<DevolucionProveedor>> GetDevolucionesAsync(int? compraId = null) =>
+        await DevolucionesConDetalle()
+            .AsNoTracking()
+            .Where(d => compraId == null || d.CompraId == compraId)
+            .OrderByDescending(d => d.Fecha)
+            .ThenByDescending(d => d.Id)
+            .Take(500)
+            .ToListAsync();
+
+    public Task<bool> TieneDevolucionesVigentesAsync(int compraId) =>
+        _context.DevolucionesProveedor.AnyAsync(d =>
+            d.CompraId == compraId && d.Estado != EstadoDevolucionProveedor.Anulada);
+
+    // ------------------------------------------ Saldo a favor con proveedores
+
+    public async Task AddMovimientoSaldoAsync(MovimientoSaldoProveedor movimiento)
+    {
+        await _context.MovimientosSaldoProveedor.AddAsync(movimiento);
+        await _context.SaveChangesAsync();
+    }
+
+    /// <summary>Lo generado suma; lo cobrado y lo aplicado restan. Lo anulado no cuenta.</summary>
+    private static IQueryable<MovimientoSaldoProveedor> Vigentes(IQueryable<MovimientoSaldoProveedor> q) =>
+        q.Where(m => !m.Anulado);
+
+    public async Task<decimal> SaldoFavorAsync(int proveedorId) =>
+        Math.Round(await Vigentes(_context.MovimientosSaldoProveedor)
+            .Where(m => m.ProveedorId == proveedorId)
+            .SumAsync(m => (decimal?)(m.Tipo == TipoMovimientoSaldoProveedor.Generado ? m.Monto : -m.Monto)) ?? 0m, 2);
+
+    public async Task<List<SaldoFavorProveedorResponse>> SaldosFavorAsync()
+    {
+        var filas = await Vigentes(_context.MovimientosSaldoProveedor)
+            .GroupBy(m => new { m.ProveedorId, m.Proveedor!.Nombre })
+            .Select(g => new
+            {
+                g.Key.ProveedorId,
+                g.Key.Nombre,
+                Saldo = g.Sum(m => m.Tipo == TipoMovimientoSaldoProveedor.Generado ? m.Monto : -m.Monto),
+                Generado = g.Sum(m => m.Tipo == TipoMovimientoSaldoProveedor.Generado ? m.Monto : 0),
+                Ultimo = g.Max(m => m.Fecha),
+            })
+            .ToListAsync();
+
+        return filas
+            .Where(f => Math.Round(f.Saldo, 2) > 0)
+            .OrderByDescending(f => f.Saldo)
+            .Select(f => new SaldoFavorProveedorResponse
+            {
+                ProveedorId = f.ProveedorId,
+                Proveedor = f.Nombre,
+                Saldo = Math.Round(f.Saldo, 2),
+                TotalGenerado = Math.Round(f.Generado, 2),
+                UltimoMovimiento = f.Ultimo,
+            })
+            .ToList();
+    }
+
+    public async Task<List<MovimientoSaldoProveedor>> GetMovimientosSaldoAsync(int proveedorId) =>
+        await _context.MovimientosSaldoProveedor
+            .AsNoTracking()
+            .Include(m => m.DevolucionProveedor)
+            .Include(m => m.CompraPago).ThenInclude(p => p!.Compra)
+            .Include(m => m.MetodoPago)
+            .Include(m => m.Usuario)
+            .Where(m => m.ProveedorId == proveedorId)
+            .OrderByDescending(m => m.Fecha)
+            .ThenByDescending(m => m.Id)
+            .ToListAsync();
+
+    public async Task<MovimientoSaldoProveedor?> GetMovimientoSaldoAsync(int id) =>
+        await _context.MovimientosSaldoProveedor.FirstOrDefaultAsync(m => m.Id == id);
+
+    public async Task<MovimientoSaldoProveedor?> GetMovimientoSaldoDePagoAsync(int compraPagoId) =>
+        await _context.MovimientosSaldoProveedor
+            .FirstOrDefaultAsync(m => m.CompraPagoId == compraPagoId && !m.Anulado);
+
+    public async Task<MovimientoSaldoProveedor?> GetMovimientoSaldoDeDevolucionAsync(int devolucionId) =>
+        await _context.MovimientosSaldoProveedor
+            .FirstOrDefaultAsync(m => m.DevolucionProveedorId == devolucionId
+                                      && m.Tipo == TipoMovimientoSaldoProveedor.Generado
+                                      && !m.Anulado);
 }

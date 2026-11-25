@@ -83,6 +83,18 @@ public static class EstadoCompra
     public const string RecibidaParcial = "RECIBIDA_PARCIAL";
     public const string RecibidaTotal = "RECIBIDA_TOTAL";
     public const string Anulada = "ANULADA";
+
+    /// <summary>
+    /// El estado según cuánto llegó de cada línea. Primero se mira si ya no falta nada: una línea que una devolución
+    /// descontó entera queda en cero y ya no espera nada, aunque nunca haya llegado.
+    /// </summary>
+    public static string SegunLoRecibido(IEnumerable<CompraDetalle> detalle)
+    {
+        var lineas = detalle.ToList();
+        if (lineas.All(d => d.CantidadRecibida >= d.Cantidad)) return RecibidaTotal;
+        if (lineas.All(d => d.CantidadRecibida <= 0)) return Pendiente;
+        return RecibidaParcial;
+    }
 }
 
 /// <summary>Tipo de comprobante que emitió el proveedor por la compra.</summary>
@@ -166,10 +178,17 @@ public class CompraPago
     public int CompraId { get; set; }
     public Compra? Compra { get; set; }
 
-    public int MetodoPagoId { get; set; }
+    /// <summary>Con qué se pagó. Null solo si se pagó con saldo a favor (<see cref="SaldoFavor"/>).</summary>
+    public int? MetodoPagoId { get; set; }
     public MetodoPago? MetodoPago { get; set; }
 
     public decimal Monto { get; set; }
+
+    /// <summary>
+    /// Se pagó con el saldo a favor que se tenía con el proveedor (de una devolución): no sale plata de ninguna cuenta,
+    /// baja el saldo a favor. Anularlo lo devuelve al saldo.
+    /// </summary>
+    public bool SaldoFavor { get; set; }
 
     /// <summary>Cuándo se registró: el de la compra si nació con ella, o el del abono posterior.</summary>
     public DateTime Fecha { get; set; } = DateTime.UtcNow;

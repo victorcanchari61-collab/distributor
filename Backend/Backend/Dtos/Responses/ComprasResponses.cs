@@ -73,12 +73,17 @@ public class CompraDetalleResponse
 public class PagoCompraResponse
 {
     public int Id { get; set; }
-    public int MetodoPagoId { get; set; }
+
+    /// <summary>Null si se pagó con saldo a favor.</summary>
+    public int? MetodoPagoId { get; set; }
     public string MetodoPago { get; set; } = string.Empty;
     public decimal Monto { get; set; }
     public DateTime Fecha { get; set; }
     public string? Usuario { get; set; }
     public bool Anulado { get; set; }
+
+    /// <summary>Se pagó con el saldo a favor que se tenía con el proveedor: no salió plata de ninguna cuenta.</summary>
+    public bool SaldoFavor { get; set; }
 
     /// <summary>En efectivo, salió de la Bóveda y no de la caja de quien pagó.</summary>
     public bool DesdeBoveda { get; set; }
@@ -121,6 +126,9 @@ public class CompraResponse
 
     /// <summary>Suma de Pagos. Si es menor que Total, falta esa diferencia por pagar.</summary>
     public decimal TotalPagado { get; set; }
+
+    /// <summary>Dónde se recibió (la última recepción vigente). Null si no llegó nada todavía.</summary>
+    public int? AlmacenRecepcionId { get; set; }
 }
 
 /// <summary>

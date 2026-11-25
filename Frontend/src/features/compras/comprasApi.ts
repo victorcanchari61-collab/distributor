@@ -198,8 +198,11 @@ export interface CompraDetalleResponse extends LineaCompraResponse {
 /** Un pago parcial: un método del catálogo y cuánto se pagó con él. */
 export interface PagoCompraResponse {
   id: number
-  metodoPagoId: number
+  /** Null si se pagó con saldo a favor. */
+  metodoPagoId: number | null
   metodoPago: string
+  /** Se pagó con el saldo a favor que se tenía con el proveedor: no salió plata de ninguna cuenta. */
+  saldoFavor: boolean
   monto: number
   fecha: string
   usuario: string | null
@@ -227,8 +230,8 @@ export const aPagoCompra = (metodoPagoId: number, monto: number, efectivoId: num
   metodoPagoId === PAGO_BOVEDA ? { metodoPagoId: efectivoId ?? 0, monto, desdeBoveda: true } : { metodoPagoId, monto }
 
 /** El valor del selector para un pago guardado: la Bóveda vuelve a ser su opción. */
-export const metodoDePago = (pago: { metodoPagoId: number; desdeBoveda?: boolean }) =>
-  pago.desdeBoveda ? PAGO_BOVEDA : pago.metodoPagoId
+export const metodoDePago = (pago: { metodoPagoId: number | null; desdeBoveda?: boolean }) =>
+  pago.desdeBoveda ? PAGO_BOVEDA : (pago.metodoPagoId ?? 0)
 
 /** La opción Bóveda, para sumarla a los métodos en efectivo. */
 export const OPCION_BOVEDA = { value: PAGO_BOVEDA, label: 'Bóveda', detalle: 'El efectivo de la empresa' }
@@ -287,6 +290,8 @@ export interface CompraResponse {
   pagos: PagoCompraResponse[]
   /** Suma de pagos. Si es menor que total, falta esa diferencia por pagar. */
   totalPagado: number
+  /** Dónde se recibió (la última recepción vigente). Null si no llegó nada todavía. */
+  almacenRecepcionId: number | null
 }
 
 export interface CrearCompraRequest {
@@ -339,4 +344,112 @@ export const compraApi = {
   /** Quita un pago registrado por error: su monto vuelve al saldo pendiente. */
   anularPago: (id: number, pagoId: number) =>
     api.del<CompraResponse>(`/compra/${id}/pagos/${pagoId}`),
+  /** Paga (en parte o todo) con el saldo a favor que se tiene con el proveedor: no mueve plata. */
+  aplicarSaldo: (id: number, monto: number) =>
+    api.post<CompraResponse>(`/compra/${id}/saldo-favor`, { monto }),
+}
+
+// ------------------------------------------------------ Devoluciones a proveedor
+
+/** RECIBIDO: ya había llegado y sale del stock. PENDIENTE: nunca llegó. */
+export type OrigenDevolucion = 'RECIBIDO' | 'PENDIENTE'
+
+/** REPOSICION: el proveedor lo traerá otro día. DESCUENTO: no lo repone y la compra baja. */
+export type ResolucionDevolucion = 'REPOSICION' | 'DESCUENTO'
+
+export interface LineaDevolucionProveedor {
+  id: number
+  compraDetalleId: number
+  productoId: number
+  codigo: string
+  producto: string
+  unidadBase: string
+  presentacion: string | null
+  /** En unidad base. */
+  cantidad: number
+  costoUnitario: number
+  importe: number
+  origen: OrigenDevolucion
+  resolucion: ResolucionDevolucion
+}
+
+export interface DevolucionProveedorResponse {
+  id: number
+  numero: string
+  compraId: number
+  compraNumero: string
+  proveedorId: number
+  proveedor: string
+  fecha: string
+  estado: 'CONFIRMADA' | 'ANULADA'
+  motivo: string
+  observacion: string | null
+  almacenId: number | null
+  almacen: string | null
+  /** El documento de inventario con que salió del stock (SP-0001), si salió algo. */
+  documentoInventario: string | null
+  fechaReposicion: string | null
+  serieNotaCredito: string | null
+  numeroNotaCredito: string | null
+  /** Lo que bajó el total de la compra. */
+  montoDescuento: number
+  /** De lo descontado, lo que ya estaba pagado y quedó como saldo a favor. */
+  saldoFavorGenerado: number
+  /** Lo que el proveedor va a reponer, a su costo. */
+  montoReposicion: number
+  usuario: string | null
+  detalle: LineaDevolucionProveedor[]
+}
+
+export interface CrearDevolucionProveedorRequest {
+  compraId: number
+  motivo: string
+  observacion?: string | null
+  /** De qué almacén sale lo que ya había llegado. */
+  almacenId?: number | null
+  fechaReposicion?: string | null
+  serieNotaCredito?: string | null
+  numeroNotaCredito?: string | null
+  detalle: { compraDetalleId: number; cantidad: number; origen: OrigenDevolucion; resolucion: ResolucionDevolucion }[]
+}
+
+export interface SaldoFavorProveedor {
+  proveedorId: number
+  proveedor: string
+  saldo: number
+  totalGenerado: number
+  ultimoMovimiento: string
+}
+
+export interface MovimientoSaldoProveedor {
+  id: number
+  tipo: 'GENERADO' | 'COBRADO' | 'APLICADO'
+  monto: number
+  fecha: string
+  /** La devolución que lo generó (DVP-0001) o la compra en la que se usó. */
+  documento: string | null
+  metodoPago: string | null
+  anulado: boolean
+  observacion: string | null
+  usuario: string | null
+}
+
+export const devolucionProveedorApi = {
+  getAll: (compraId?: number) =>
+    api.get<DevolucionProveedorResponse[]>(`/devolucion-proveedor${compraId ? `?compraId=${compraId}` : ''}`),
+  getById: (id: number) => api.get<DevolucionProveedorResponse>(`/devolucion-proveedor/${id}`),
+  create: (body: CrearDevolucionProveedorRequest) =>
+    api.post<DevolucionProveedorResponse>('/devolucion-proveedor', body),
+  anular: (id: number) => api.patch<DevolucionProveedorResponse>(`/devolucion-proveedor/${id}/anular`),
+
+  /** Los proveedores que deben devolver plata. */
+  saldos: () => api.get<SaldoFavorProveedor[]>('/devolucion-proveedor/saldos'),
+  saldo: (proveedorId: number) =>
+    api.get<{ proveedorId: number; saldo: number }>(`/devolucion-proveedor/saldos/${proveedorId}`),
+  movimientos: (proveedorId: number) =>
+    api.get<MovimientoSaldoProveedor[]>(`/devolucion-proveedor/saldos/${proveedorId}/movimientos`),
+  /** El proveedor devolvió plata: entra a una caja o banco. */
+  cobrar: (proveedorId: number, body: PagoCompraRequest & { observacion?: string | null }) =>
+    api.post<MovimientoSaldoProveedor>(`/devolucion-proveedor/saldos/${proveedorId}/cobrar`, body),
+  anularCobro: (movimientoId: number) => api.del<void>(`/devolucion-proveedor/saldos/movimientos/${movimientoId}`),
 }

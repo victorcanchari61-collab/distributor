@@ -163,6 +163,15 @@ public class InventarioRepository : IInventarioRepository
     public async Task<List<CapaCosto>> GetCapasDeMovimientoAsync(int movimientoId) =>
         await _context.CapasCosto.Where(c => c.MovimientoId == movimientoId).ToListAsync();
 
+    public async Task<HashSet<int>> GetMovimientosRecepcionDeLineaAsync(int compraDetalleId) =>
+        (await _context.Movimientos
+            .Where(m => m.CompraDetalleId == compraDetalleId
+                        && m.Tipo == TipoMovimiento.Entrada
+                        && m.Documento!.Estado == EstadoDocumento.Confirmado)
+            .Select(m => m.Id)
+            .ToListAsync())
+        .ToHashSet();
+
     public async Task AddCapaAsync(CapaCosto capa) => await _context.CapasCosto.AddAsync(capa);
 
     public async Task<ResumenStockResponse> ResumenStockAsync(int? almacenId)
@@ -391,6 +400,8 @@ public class InventarioRepository : IInventarioRepository
             TipoDocumentoInventario.NotaVenta => "SV",
             TipoDocumentoInventario.DevolucionCliente => "DC",
             TipoDocumentoInventario.Recojo => "RJ",
+            // "DP" ya es la devolución de un préstamo: esta es la salida al proveedor.
+            TipoDocumentoInventario.DevolucionProveedor => "SP",
             _ => "AJ"
         };
 

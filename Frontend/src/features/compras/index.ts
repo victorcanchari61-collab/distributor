@@ -2,7 +2,8 @@ export { OrdenesCompraPage } from './OrdenesCompraPage'
 export { MisComprasPage } from './MisComprasPage'
 export { RecepcionesPage } from './RecepcionesPage'
 export { SolicitudesCompraPage } from './SolicitudesCompraPage'
-export { ordenCompraApi, compraApi } from './comprasApi'
+export { DevolucionesProveedorPage } from './DevolucionesProveedorPage'
+export { ordenCompraApi, compraApi, devolucionProveedorApi } from './comprasApi'
 export type {
   LineaCompraRequest,
   LineaCompraResponse,
