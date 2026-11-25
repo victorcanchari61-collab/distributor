@@ -111,27 +111,15 @@ class _TarjetaKardex extends StatelessWidget {
 
   List<CampoDetalle> get _campos => [
     CampoDetalle('Fecha', _fecha(movimiento.fecha)),
+    // El motivo dice por qué se movió; el estado, si su documento sigue en pie o
+    // se anuló. Antes el "Anulado" iba pegado al motivo y se leía como parte de él.
+    CampoDetalle('Motivo', movimiento.motivo),
     CampoDetalle(
-      'Motivo',
-      movimiento.motivo,
-      widget: !movimiento.anulado
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    movimiento.motivo,
-                    textAlign: TextAlign.right,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colores.tinta),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const AppEtiqueta('Anulado', tono: EtiquetaTono.peligro),
-              ],
-            ),
+      'Estado',
+      movimiento.anulado ? 'Anulado' : 'Vigente',
+      widget: movimiento.anulado
+          ? const AppEtiqueta('Anulado', tono: EtiquetaTono.peligro)
+          : const AppEtiqueta('Vigente', tono: EtiquetaTono.exito),
     ),
     CampoDetalle('Producto', movimiento.producto),
     CampoDetalle('Almacén', movimiento.almacen, enTarjeta: false),
