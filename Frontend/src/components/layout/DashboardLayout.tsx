@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Menu, PanelLeftOpen } from 'lucide-react'
+import { Menu, PanelLeftOpen, PanelRightOpen } from 'lucide-react'
 import { CabeceraGlobalContext, cn } from '../ui'
 import type { CabeceraGlobal } from '../ui'
 import { BarraInferior } from './BarraInferior'
 import { CampanaAlertas, MenuCuenta } from './CuentaUsuario'
-import type { FormatoNavegacion } from './formatoNavegacion'
+import type { FormatoNavegacion, LadoNavegacion } from './formatoNavegacion'
 import { Sidebar } from './Sidebar'
 import { resolveNav } from './navigation'
 
@@ -22,6 +22,9 @@ export interface DashboardLayoutProps {
   /** Menú lateral o barra fija abajo: lo elige cada persona en su menú de cuenta. */
   formato: FormatoNavegacion
   onFormato: (formato: FormatoNavegacion) => void
+  /** De qué lado va el menú lateral (solo aplica con `formato: 'lateral'`). */
+  lado: LadoNavegacion
+  onLado: (lado: LadoNavegacion) => void
   children: ReactNode
 }
 
@@ -46,12 +49,15 @@ export function DashboardLayout({
   pestanas,
   formato,
   onFormato,
+  lado,
+  onLado,
   children,
 }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [oculto, setOculto] = useState(false)
   const barra = formato === 'barra'
+  const derecha = lado === 'derecha'
 
   const { sys } = resolveNav(active)
   const cabecera = useMemo(() => SIN_CABECERA_GLOBAL, [])
@@ -73,13 +79,25 @@ export function DashboardLayout({
           onCloseMobile={() => setMobileOpen(false)}
           oculto={oculto}
           onOcultar={() => setOculto(true)}
+          lado={lado}
+          onLado={onLado}
         />
       )}
 
       <div
         className={cn(
           'flex min-h-screen flex-col transition-[padding] duration-200',
-          barra ? '' : oculto ? 'lg:pl-0' : collapsed ? 'lg:pl-[72px]' : 'lg:pl-56',
+          barra
+            ? ''
+            : derecha
+              ? cn(
+                  'lg:pl-0',
+                  oculto ? 'lg:pr-0' : collapsed ? 'lg:pr-[72px]' : 'lg:pr-56',
+                )
+              : cn(
+                  'lg:pr-0',
+                  oculto ? 'lg:pl-0' : collapsed ? 'lg:pl-[72px]' : 'lg:pl-56',
+                ),
         )}
       >
         {/* La franja de arriba: las pestañas abiertas a la izquierda; la cuenta y la campana a la derecha. */}
@@ -94,8 +112,8 @@ export function DashboardLayout({
               >
                 <Menu size={20} />
               </button>
-              {/* Solo con el sider oculto: es la única forma de recuperarlo. */}
-              {oculto && (
+              {/* Solo con el sider oculto: es la única forma de recuperarlo. Sale del lado donde estaba. */}
+              {oculto && !derecha && (
                 <button
                   type="button"
                   onClick={() => setOculto(false)}
@@ -112,6 +130,17 @@ export function DashboardLayout({
           <div className="min-w-0 flex-1">{pestanas}</div>
 
           <div className="mb-1 flex shrink-0 items-center gap-2">
+            {!barra && oculto && derecha && (
+              <button
+                type="button"
+                onClick={() => setOculto(false)}
+                aria-label="Mostrar menú"
+                title="Mostrar menú"
+                className="hidden cursor-pointer rounded-lg p-2 text-ink-muted transition-colors hover:bg-white hover:text-ink lg:block"
+              >
+                <PanelRightOpen size={20} />
+              </button>
+            )}
             <MenuCuenta
               nombre={userName}
               email={userEmail}
@@ -120,6 +149,8 @@ export function DashboardLayout({
               onLogout={onLogout}
               formato={formato}
               onFormato={onFormato}
+              lado={lado}
+              onLado={onLado}
             />
             <CampanaAlertas onNavigate={onSelect} />
           </div>

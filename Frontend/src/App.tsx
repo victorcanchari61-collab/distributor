@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ComponentType } from 'react'
 import { Home, LayoutDashboard, ShieldOff, UserRound } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { DashboardLayout, navIdFromPath, navPath, puedeAbrir, resolveNav, useFormatoNavegacion } from './components/layout'
+import { DashboardLayout, navIdFromPath, navPath, puedeAbrir, resolveNav, useFormatoNavegacion, useLadoNavegacion } from './components/layout'
 import { AccesoRapidoContexto } from './components/layout/AccesoRapidoContexto'
 import { pulsarAccesoRapido } from './components/layout/accesosRapidos'
 import type { AccesoRapido } from './components/layout/accesosRapidos'
@@ -201,6 +201,7 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
     maximo: MAXIMO_PESTANAS,
   })
   const [formato, setFormato] = useFormatoNavegacion(`distribuidora.navegacion.${usuario.id}`)
+  const [lado, setLado] = useLadoNavegacion(`distribuidora.lado.${usuario.id}`)
 
   // Entrar a una vista desde el menú abre su pestaña (o enfoca la que ya la tiene). Con el máximo alcanzado no cabe
   // otra: la vista reemplaza a la de la pestaña activa.
@@ -265,6 +266,8 @@ function Panel({ usuario, onSalir }: { usuario: UsuarioResponse; onSalir: () => 
       onLogout={onSalir}
       formato={formato}
       onFormato={setFormato}
+      lado={lado}
+      onLado={setLado}
       pestanas={
         <BarraPestanas
           pestanas={lista}

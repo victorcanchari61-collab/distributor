@@ -11,6 +11,7 @@ import {
   PackageCheck,
   PanelBottom,
   PanelLeft,
+  PanelRight,
   PackageX,
   UserRound,
 } from 'lucide-react'
@@ -20,7 +21,7 @@ import type { AlertaResponse } from '../../lib/alertasApi'
 import { alertasLeidas, marcarLeida, marcarTodasLeidas } from '../../lib/alertasLeidas'
 import { useRealtime } from '../../lib/realtime'
 import { resolveNav } from './navigation'
-import type { FormatoNavegacion } from './formatoNavegacion'
+import type { FormatoNavegacion, LadoNavegacion } from './formatoNavegacion'
 import { urlImagen } from '../../features/tms/flotaApi'
 
 /** Como se lee la accion pedida, sin la pantalla al lado. */
@@ -268,6 +269,9 @@ export interface MenuCuentaProps {
   /** Cómo navega esta persona: menú lateral o barra de abajo. Sin esto no se ofrece elegir. */
   formato?: FormatoNavegacion
   onFormato?: (formato: FormatoNavegacion) => void
+  /** De qué lado va el menú lateral. */
+  lado?: LadoNavegacion
+  onLado?: (lado: LadoNavegacion) => void
 }
 
 const FORMATOS: { id: FormatoNavegacion; etiqueta: string; icono: typeof PanelLeft }[] = [
@@ -275,12 +279,17 @@ const FORMATOS: { id: FormatoNavegacion; etiqueta: string; icono: typeof PanelLe
   { id: 'barra', etiqueta: 'Barra inferior', icono: PanelBottom },
 ]
 
+const LADOS: { id: LadoNavegacion; etiqueta: string; icono: typeof PanelLeft }[] = [
+  { id: 'izquierda', etiqueta: 'Izquierda', icono: PanelLeft },
+  { id: 'derecha', etiqueta: 'Derecha', icono: PanelRight },
+]
+
 /**
  * La cuenta del usuario: una pastilla blanca con la foto, el nombre y el
  * correo. Al tocarla se abre Mi perfil y Cerrar sesión. En el celular solo va
  * la foto: el nombre no entra junto al título.
  */
-export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout, formato, onFormato }: MenuCuentaProps) {
+export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout, formato, onFormato, lado, onLado }: MenuCuentaProps) {
   const [abierto, setAbierto] = useState(false)
   const contenedorRef = useRef<HTMLDivElement>(null)
   const cerrar = useCallback(() => setAbierto(false), [])
@@ -348,6 +357,34 @@ export function MenuCuenta({ nombre, email, foto, onPerfil, onLogout, formato, o
                   {formato === f.id && <Check size={15} className="text-[rgb(var(--sys-rgb))]" />}
                 </button>
               ))}
+
+              {formato === 'lateral' && lado && onLado && (
+                <div className="mt-1 border-t border-line pt-1">
+                  <p className="px-4 pt-1 pb-1 text-[11px] font-semibold tracking-wide text-ink-soft uppercase">
+                    Lado del menú
+                  </p>
+                  <div className="flex gap-1 px-3 pb-1">
+                    {LADOS.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={lado === l.id}
+                        onClick={() => elegir(() => onLado(l.id))}
+                        className={cn(
+                          'flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors',
+                          lado === l.id
+                            ? 'border-[rgb(var(--sys-rgb)/0.35)] bg-[rgb(var(--sys-rgb)/0.1)] text-[rgb(var(--sys-ink-rgb))]'
+                            : 'border-line text-ink-muted hover:bg-surface-alt hover:text-ink',
+                        )}
+                      >
+                        <l.icono size={14} />
+                        {l.etiqueta}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <button
