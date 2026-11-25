@@ -154,8 +154,11 @@ class PagoCompra {
   int get metodoElegido => desdeBoveda ? PagoBoveda.id : metodoPagoId ?? 0;
 
   /// Como se lee el metodo: "Bóveda" y no "Efectivo" si salio de ahi.
-  String get nombreMetodo =>
-      saldoFavor ? 'Saldo a favor' : desdeBoveda ? PagoBoveda.nombre : metodoPago;
+  String get nombreMetodo => saldoFavor
+      ? 'Saldo a favor'
+      : desdeBoveda
+      ? PagoBoveda.nombre
+      : metodoPago;
 
   factory PagoCompra.desdeJson(Map<String, dynamic> json) => PagoCompra(
     id: json['id'] as int,

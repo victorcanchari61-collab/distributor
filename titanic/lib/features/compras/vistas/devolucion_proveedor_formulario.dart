@@ -560,10 +560,7 @@ class _TarjetaFilaDevolucion extends StatelessWidget {
             etiqueta: 'A cambio',
             icono: Icons.swap_horiz,
             opciones: const [
-              Opcion(
-                ResolucionDevolucion.descuento,
-                'Descuento: no lo repone',
-              ),
+              Opcion(ResolucionDevolucion.descuento, 'Descuento: no lo repone'),
               Opcion(
                 ResolucionDevolucion.reposicion,
                 'Reposición: lo trae otro día',

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { FaTableColumns } from 'react-icons/fa6'
 import { cn } from './cn'
-import { claseBuscador, claseCampo } from './Input'
+import { claseBuscador } from './Input'
 import { useDismiss } from './useDismiss'
 import { instanteMs } from '../../lib/fechas'
 import { FiltersButton } from './FiltersButton'
@@ -57,9 +57,6 @@ const PAGE_SIZE = 20
  * que esto y las dos se recortan a la vez.
  */
 const MIN_COLUMNA = 120
-
-/** Las otras opciones del selector de "por pagina". */
-const PAGE_SIZES = [PAGE_SIZE, 50, 100, 200]
 
 export interface DataTableColumn<T> {
   key: string
@@ -343,11 +340,8 @@ export function SysDataTable<T>({
   numerar = true,
 }: SysDataTableProps<T>) {
   // Dentro de una ventana emergente la tabla crece con sus filas en vez de reservar un alto fijo (dejaba un hueco
-  // vacío), y el pie de paginación solo sale si de verdad hay más filas de las que caben en una página.
+  // vacío).
   const enModal = useContext(DentroDeModal)
-  // Lo mismo en una tabla sin buscador ni filtros (las líneas de un pedido o una compra): es parte de un formulario,
-  // no un listado, y "Sin registros · 20 por página" debajo de "Agrega productos" sobraba.
-  const paginacionSoloSiHaceFalta = enModal || !toolbar
   const alturaFija = alturaFijaPedida ?? (!enModal && toolbar && paginacion)
   // Las acciones son píldoras de color, más anchas que los íconos sueltos de antes: el ancho que pide cada pantalla se ensancha.
   const actionsWidth = Math.round(actionsWidthBase * 1.2)
@@ -396,7 +390,8 @@ export function SysDataTable<T>({
   const [widths, setWidths] = useState<Record<string, number>>({})
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(pageSize)
+  // Fijo: el pie ya no ofrece cambiarlo (no aportaba), cada vista declara el suyo.
+  const perPage = pageSize
 
   const byKey = useMemo(
     () => Object.fromEntries(columns.map((c) => [c.key, c])) as Record<string, DataTableColumn<T>>,
@@ -1332,102 +1327,63 @@ export function SysDataTable<T>({
         />
       )}
 
-      {paginacion && (!paginacionSoloSiHaceFalta || total > pageSize) && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-[13px] text-ink-muted">
-          <div className="flex flex-wrap items-center gap-3">
-            <span>
-              {total === 0 ? (
-                'Sin registros'
-              ) : (
-                <>
-                  Mostrando{' '}
-                  <b className="font-semibold text-ink">
-                    {from + 1}–{Math.min(from + perPage, total)}
-                  </b>{' '}
-                  de <b className="font-semibold text-ink">{total}</b>
-                </>
-              )}
-              {/* En modo cliente se aclara sobre cuantas filas se filtro; contra
-                  el servidor no aplica: `rows` es solo la pagina que llego. */}
-              {!enServidor && data.length !== rows.length && ` (${rows.length} en total)`}
-            </span>
-
-            <label className="flex items-center gap-1.5">
-              <select
-                value={perPage}
-                onChange={(e) => setPerPage(Number(e.target.value))}
-                className={cn('h-8 cursor-pointer rounded-lg pr-6 pl-2.5 text-[13px] font-medium text-ink outline-none', claseCampo(false, 'propio'))}
-              >
-                {/* El tamaño que declara la vista entra en la lista: si no, el
-                    select mostraria un valor que no es ninguna de sus opciones. */}
-                {[...new Set([pageSize, ...PAGE_SIZES])]
-                  .sort((a, b) => a - b)
-                  .map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-              </select>
-              <span>por página</span>
-            </label>
-          </div>
-
+      {/* Solo los botones de página, y solo si hay más de una: el "Mostrando 1–20 de 22 · 20 por página" no aportaba. */}
+      {paginacion && pageCount > 1 && (
+        <div className="mt-3 flex justify-end text-[13px] text-ink-muted">
           {/* Los números van en una caja, igual que las pestañas: la página actual se rellena con el color del módulo. */}
-          {pageCount > 1 && (
-            <nav
-              aria-label="Paginación"
-              className="flex items-center gap-1 rounded-xl border border-line bg-slate-200/70 p-1"
+          <nav
+            aria-label="Paginación"
+            className="flex items-center gap-1 rounded-xl border border-line bg-slate-200/70 p-1"
+          >
+            <PageButton onClick={() => irAPagina(1)} disabled={page === 1} label="Primera">
+              <ChevronsLeft size={15} />
+            </PageButton>
+            <PageButton
+              onClick={() => irAPagina(page - 1)}
+              disabled={page === 1}
+              label="Anterior"
             >
-              <PageButton onClick={() => irAPagina(1)} disabled={page === 1} label="Primera">
-                <ChevronsLeft size={15} />
-              </PageButton>
-              <PageButton
-                onClick={() => irAPagina(page - 1)}
-                disabled={page === 1}
-                label="Anterior"
-              >
-                <ChevronLeft size={15} />
-              </PageButton>
+              <ChevronLeft size={15} />
+            </PageButton>
 
-              {pageNumbers(page, pageCount).map((n, i) =>
-                n === '...' ? (
-                  <span key={`gap${i}`} className="inline-flex h-8 min-w-6 items-end justify-center pb-1.5 text-ink-soft">
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => irAPagina(n as number)}
-                    aria-current={n === page ? 'page' : undefined}
-                    className={cn(
-                      'inline-flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-lg border px-2 text-[13px] tabular-nums transition-colors',
-                      n === page
-                        ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] font-semibold text-[rgb(var(--sys-ink-rgb))] ring-1 ring-[rgb(var(--sys-rgb))]'
-                        : 'border-line bg-white font-medium text-ink-muted hover:border-line-strong hover:text-ink',
-                    )}
-                  >
-                    {n}
-                  </button>
-                ),
-              )}
+            {pageNumbers(page, pageCount).map((n, i) =>
+              n === '...' ? (
+                <span key={`gap${i}`} className="inline-flex h-8 min-w-6 items-end justify-center pb-1.5 text-ink-soft">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => irAPagina(n as number)}
+                  aria-current={n === page ? 'page' : undefined}
+                  className={cn(
+                    'inline-flex h-8 min-w-8 cursor-pointer items-center justify-center rounded-lg border px-2 text-[13px] tabular-nums transition-colors',
+                    n === page
+                      ? 'border-[rgb(var(--sys-rgb))] bg-[rgb(var(--sys-rgb)/0.12)] font-semibold text-[rgb(var(--sys-ink-rgb))] ring-1 ring-[rgb(var(--sys-rgb))]'
+                      : 'border-line bg-white font-medium text-ink-muted hover:border-line-strong hover:text-ink',
+                  )}
+                >
+                  {n}
+                </button>
+              ),
+            )}
 
-              <PageButton
-                onClick={() => irAPagina(page + 1)}
-                disabled={page === pageCount}
-                label="Siguiente"
-              >
-                <ChevronRight size={15} />
-              </PageButton>
-              <PageButton
-                onClick={() => irAPagina(pageCount)}
-                disabled={page === pageCount}
-                label="Ultima"
-              >
-                <ChevronsRight size={15} />
-              </PageButton>
-            </nav>
-          )}
+            <PageButton
+              onClick={() => irAPagina(page + 1)}
+              disabled={page === pageCount}
+              label="Siguiente"
+            >
+              <ChevronRight size={15} />
+            </PageButton>
+            <PageButton
+              onClick={() => irAPagina(pageCount)}
+              disabled={page === pageCount}
+              label="Ultima"
+            >
+              <ChevronsRight size={15} />
+            </PageButton>
+          </nav>
         </div>
       )}
     </div>

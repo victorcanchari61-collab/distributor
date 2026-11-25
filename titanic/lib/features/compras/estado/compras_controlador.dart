@@ -21,7 +21,8 @@ final estadoSolicitudFiltroProvider = StateProvider.autoDispose<String?>(
   (ref) => null,
 );
 
-class SolicitudesCompraControlador extends AsyncNotifier<List<SolicitudCompra>> {
+class SolicitudesCompraControlador
+    extends AsyncNotifier<List<SolicitudCompra>> {
   @override
   Future<List<SolicitudCompra>> build() =>
       ref.watch(comprasApiProvider).solicitudesCompra();

@@ -151,12 +151,12 @@ class _CompraFormularioState extends ConsumerState<CompraFormulario> {
     // maneja (se anulan aparte).
     for (final p in widget.compra?.pagos ?? const [])
       if (!p.saldoFavor)
-      _FilaPago(
-        // Uno que salio de la Boveda vuelve a ser la opcion Boveda.
-        metodoPagoId: p.metodoElegido,
-        metodoPago: p.nombreMetodo,
-        monto: p.monto,
-      ),
+        _FilaPago(
+          // Uno que salio de la Boveda vuelve a ser la opcion Boveda.
+          metodoPagoId: p.metodoElegido,
+          metodoPago: p.nombreMetodo,
+          monto: p.monto,
+        ),
   ];
 
   bool get _esNuevo => widget.compra == null;

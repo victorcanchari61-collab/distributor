@@ -371,6 +371,8 @@ export interface LineaDevolucionProveedor {
   importe: number
   origen: OrigenDevolucion
   resolucion: ResolucionDevolucion
+  /** Si es reposición, cuánto de esta línea todavía no llega (en unidad base). */
+  cantidadPorReponer: number
 }
 
 export interface DevolucionProveedorResponse {
@@ -395,8 +397,10 @@ export interface DevolucionProveedorResponse {
   montoDescuento: number
   /** De lo descontado, lo que ya estaba pagado y quedó como saldo a favor. */
   saldoFavorGenerado: number
-  /** Lo que el proveedor va a reponer, a su costo. */
+  /** Lo que se mandó a reponer, a su costo (llegue o no). */
   montoReposicion: number
+  /** De lo que se mandó a reponer, lo que todavía no llega. Cero si ya llegó todo. */
+  montoPorReponer: number
   usuario: string | null
   detalle: LineaDevolucionProveedor[]
 }

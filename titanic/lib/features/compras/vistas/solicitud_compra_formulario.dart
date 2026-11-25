@@ -315,7 +315,8 @@ class _SolicitudCompraFormularioState
                 Opcion<String>(UrgenciaSolicitud.normal, 'Normal'),
                 Opcion<String>(UrgenciaSolicitud.urgente, 'Urgente'),
               ],
-              onCambio: (v) => setState(() => _urgencia = v ?? UrgenciaSolicitud.normal),
+              onCambio: (v) =>
+                  setState(() => _urgencia = v ?? UrgenciaSolicitud.normal),
             ),
             const SizedBox(height: Dimen.espacio4),
 
@@ -392,7 +393,9 @@ class _SolicitudCompraFormularioState
                 texto: 'Cancelar',
                 variante: BotonVariante.texto,
                 expandido: true,
-                onPressed: _guardando ? null : () => Navigator.of(context).pop(),
+                onPressed: _guardando
+                    ? null
+                    : () => Navigator.of(context).pop(),
               ),
             ],
             const SizedBox(height: Dimen.espacio5),

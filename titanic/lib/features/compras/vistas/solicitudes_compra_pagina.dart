@@ -69,8 +69,9 @@ class SolicitudesCompraPagina extends ConsumerWidget {
           progreso: todas.isNotEmpty ? borradores / todas.length : 0,
           accion: AccionDato(
             etiqueta: borradores > 0 ? 'Ver los $borradores' : 'Ver',
-            onTap: () => ref.read(estadoSolicitudFiltroProvider.notifier).state =
-                EstadoSolicitudCompra.borrador,
+            onTap: () =>
+                ref.read(estadoSolicitudFiltroProvider.notifier).state =
+                    EstadoSolicitudCompra.borrador,
           ),
         ),
         AppTarjetaDato(
@@ -81,8 +82,9 @@ class SolicitudesCompraPagina extends ConsumerWidget {
           progreso: todas.isNotEmpty ? pendientes / todas.length : 0,
           accion: AccionDato(
             etiqueta: pendientes > 0 ? 'Ver las $pendientes' : 'Ver',
-            onTap: () => ref.read(estadoSolicitudFiltroProvider.notifier).state =
-                EstadoSolicitudCompra.pendiente,
+            onTap: () =>
+                ref.read(estadoSolicitudFiltroProvider.notifier).state =
+                    EstadoSolicitudCompra.pendiente,
           ),
         ),
         AppTarjetaDato(
@@ -100,8 +102,9 @@ class SolicitudesCompraPagina extends ConsumerWidget {
           progreso: todas.isNotEmpty ? atendidas / todas.length : 0,
           accion: AccionDato(
             etiqueta: atendidas > 0 ? 'Ver las $atendidas' : 'Ver',
-            onTap: () => ref.read(estadoSolicitudFiltroProvider.notifier).state =
-                EstadoSolicitudCompra.atendida,
+            onTap: () =>
+                ref.read(estadoSolicitudFiltroProvider.notifier).state =
+                    EstadoSolicitudCompra.atendida,
           ),
         ),
       ],

@@ -76,5 +76,42 @@ void main() {
       'Descuento',
     );
     expect(d.buscable, contains('cp-0017'));
+    // Un servidor anterior no manda lo que falta reponer.
+    expect(d.montoPorReponer, 0);
+  });
+
+  test('una reposicion que ya llego no cuenta como por reponer', () {
+    final d = DevolucionProveedor.desdeJson({
+      'id': 4,
+      'numero': 'DVP-0004',
+      'compraId': 18,
+      'compraNumero': 'CP-0018',
+      'proveedorId': 1,
+      'proveedor': 'Proveedor XYZ',
+      'fecha': '2026-11-24T10:00:00Z',
+      'estado': 'CONFIRMADA',
+      'motivo': 'Vino roto',
+      'montoDescuento': 0,
+      'saldoFavorGenerado': 0,
+      'montoReposicion': 40,
+      'montoPorReponer': 16,
+      'detalle': [
+        {
+          'id': 9,
+          'producto': 'MARAVILLA',
+          'codigo': '100',
+          'unidadBase': 'UND',
+          'cantidad': 5,
+          'importe': 40,
+          'origen': 'RECIBIDO',
+          'resolucion': 'REPOSICION',
+          'cantidadPorReponer': 2,
+        },
+      ],
+    });
+
+    expect(d.montoReposicion, 40);
+    expect(d.montoPorReponer, 16);
+    expect(d.detalle.single.cantidadPorReponer, 2);
   });
 }

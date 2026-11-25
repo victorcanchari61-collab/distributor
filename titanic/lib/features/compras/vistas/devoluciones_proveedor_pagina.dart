@@ -42,7 +42,8 @@ class DevolucionesProveedorPagina extends ConsumerWidget {
         const <DevolucionProveedor>[];
     final vigentes = todas.where((d) => !d.anulada).toList();
     final descontado = vigentes.fold<double>(0, (s, d) => s + d.montoDescuento);
-    final aReponer = vigentes.fold<double>(0, (s, d) => s + d.montoReposicion);
+    // Solo lo que todavia no llega: lo repuesto que ya llego no se espera.
+    final aReponer = vigentes.fold<double>(0, (s, d) => s + d.montoPorReponer);
     final saldos =
         ref.watch(saldosFavorProvider).valueOrNull ??
         const <SaldoFavorProveedor>[];
@@ -136,7 +137,9 @@ class DevolucionesProveedorPagina extends ConsumerWidget {
   Future<void> _abrirFiltros(BuildContext context, WidgetRef ref) {
     return mostrarFiltros(
       context,
-      activos: ref.read(estadoDevolucionProveedorFiltroProvider) == null ? 0 : 1,
+      activos: ref.read(estadoDevolucionProveedorFiltroProvider) == null
+          ? 0
+          : 1,
       onLimpiar: () =>
           ref.read(estadoDevolucionProveedorFiltroProvider.notifier).state =
               null,
@@ -285,7 +288,11 @@ class _TarjetaDevolucion extends StatelessWidget {
     if (devolucion.montoReposicion > 0)
       CampoDetalle(
         'A reponer',
-        'S/ ${devolucion.montoReposicion.toStringAsFixed(2)}',
+        devolucion.montoPorReponer > 0
+            ? 'S/ ${devolucion.montoPorReponer.toStringAsFixed(2)}'
+            : devolucion.anulada
+            ? '—'
+            : 'Nada pendiente',
       ),
     if (devolucion.saldoFavorGenerado > 0)
       CampoDetalle(
@@ -362,7 +369,7 @@ class _TarjetaDevolucion extends StatelessWidget {
             filas: [
               [
                 ('Cant.', '${formatoNumero(l.cantidad)} ${l.unidadBase}'),
-                ('A cambio', ResolucionDevolucion.etiqueta(l.resolucion)),
+                ('A cambio', _aCambioLinea(l)),
                 ('Importe', 'S/ ${l.importe.toStringAsFixed(2)}'),
               ],
             ],
@@ -370,6 +377,18 @@ class _TarjetaDevolucion extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Que da el proveedor por esta linea y, si es reposicion, si todavia falta que llegue.
+/// Sin pendiente puede ser que llego o que no lo trajo y se desconto en otra devolucion.
+String _aCambioLinea(LineaDevolucionProveedor l) {
+  final etiqueta = ResolucionDevolucion.etiqueta(l.resolucion);
+  if (l.resolucion != ResolucionDevolucion.reposicion) return etiqueta;
+  if (l.cantidadPorReponer <= 0) return '$etiqueta · nada pendiente';
+  if (l.cantidadPorReponer < l.cantidad) {
+    return '$etiqueta · falta ${formatoNumero(l.cantidadPorReponer)}';
+  }
+  return '$etiqueta · por llegar';
 }
 
 String _fecha(DateTime f) =>

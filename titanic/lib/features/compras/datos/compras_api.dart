@@ -40,8 +40,7 @@ class ComprasApi {
   Future<SolicitudCompra> crearSolicitudCompra(
     Map<String, dynamic> cuerpo,
   ) async => SolicitudCompra.desdeJson(
-    await _api.post('/solicitudcompra', cuerpo: cuerpo)
-        as Map<String, dynamic>,
+    await _api.post('/solicitudcompra', cuerpo: cuerpo) as Map<String, dynamic>,
   );
 
   /// PUT /api/solicitudcompra/{id}. Solo mientras esta Pendiente.

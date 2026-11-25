@@ -36,6 +36,7 @@ class LineaDevolucionProveedor {
     required this.importe,
     required this.origen,
     required this.resolucion,
+    this.cantidadPorReponer = 0,
   });
 
   final int id;
@@ -49,18 +50,22 @@ class LineaDevolucionProveedor {
   final String origen;
   final String resolucion;
 
-  factory LineaDevolucionProveedor.desdeJson(Map<String, dynamic> json) =>
-      LineaDevolucionProveedor(
-        id: json['id'] as int,
-        producto: json['producto'] as String? ?? '',
-        codigo: json['codigo'] as String? ?? '',
-        unidadBase: json['unidadBase'] as String? ?? '',
-        cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
-        importe: (json['importe'] as num?)?.toDouble() ?? 0,
-        origen: json['origen'] as String? ?? OrigenDevolucion.recibido,
-        resolucion:
-            json['resolucion'] as String? ?? ResolucionDevolucion.descuento,
-      );
+  /// Si es reposicion, cuanto de esta linea todavia no llega (en unidad base).
+  final double cantidadPorReponer;
+
+  factory LineaDevolucionProveedor.desdeJson(
+    Map<String, dynamic> json,
+  ) => LineaDevolucionProveedor(
+    id: json['id'] as int,
+    producto: json['producto'] as String? ?? '',
+    codigo: json['codigo'] as String? ?? '',
+    unidadBase: json['unidadBase'] as String? ?? '',
+    cantidad: (json['cantidad'] as num?)?.toDouble() ?? 0,
+    importe: (json['importe'] as num?)?.toDouble() ?? 0,
+    origen: json['origen'] as String? ?? OrigenDevolucion.recibido,
+    resolucion: json['resolucion'] as String? ?? ResolucionDevolucion.descuento,
+    cantidadPorReponer: (json['cantidadPorReponer'] as num?)?.toDouble() ?? 0,
+  );
 }
 
 /// Lo que se le devolvio a un proveedor de una compra.
@@ -84,6 +89,7 @@ class DevolucionProveedor {
     required this.montoDescuento,
     required this.saldoFavorGenerado,
     required this.montoReposicion,
+    this.montoPorReponer = 0,
     this.usuario,
     required this.detalle,
   });
@@ -112,8 +118,11 @@ class DevolucionProveedor {
   /// De lo descontado, lo que ya estaba pagado y quedo como saldo a favor.
   final double saldoFavorGenerado;
 
-  /// Lo que el proveedor va a reponer, a su costo.
+  /// Lo que se mando a reponer, a su costo (llegue o no).
   final double montoReposicion;
+
+  /// De lo que se mando a reponer, lo que todavia no llega. Cero si ya llego.
+  final double montoPorReponer;
   final String? usuario;
   final List<LineaDevolucionProveedor> detalle;
 
@@ -145,6 +154,7 @@ class DevolucionProveedor {
         saldoFavorGenerado:
             (json['saldoFavorGenerado'] as num?)?.toDouble() ?? 0,
         montoReposicion: (json['montoReposicion'] as num?)?.toDouble() ?? 0,
+        montoPorReponer: (json['montoPorReponer'] as num?)?.toDouble() ?? 0,
         usuario: json['usuario'] as String?,
         detalle: (json['detalle'] as List? ?? const [])
             .map(

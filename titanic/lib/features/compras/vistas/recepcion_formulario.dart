@@ -34,7 +34,6 @@ class _FilaRecepcion {
   final TextEditingController loteCtrl;
   DateTime? vencimiento;
 
-
   /*
    * Se compro por saco: se recibe por saco.
    *
@@ -107,7 +106,8 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
   List<Ubicacion> _lugares() {
     final id = _almacenId;
     if (id == null) return const [];
-    return (ref.watch(ubicacionesProvider(id)).valueOrNull ?? const <Ubicacion>[])
+    return (ref.watch(ubicacionesProvider(id)).valueOrNull ??
+            const <Ubicacion>[])
         .where((l) => l.activo)
         .toList();
   }
@@ -396,7 +396,10 @@ class _RecepcionFormularioState extends ConsumerState<RecepcionFormulario> {
                       icono: Icons.layers_outlined,
                       habilitado: !_guardando && pisos.isNotEmpty,
                       opciones: [
-                        Opcion<int?>(null, pisos.isEmpty ? 'Sin pisos' : 'Sin piso'),
+                        Opcion<int?>(
+                          null,
+                          pisos.isEmpty ? 'Sin pisos' : 'Sin piso',
+                        ),
                         for (final p in pisos) Opcion<int?>(p.id, nombre(p)),
                       ],
                       onCambio: (v) => setState(() {

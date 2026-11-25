@@ -48,7 +48,9 @@ class MisComprasPagina extends ConsumerWidget {
     final recibidas = todas
         .where((c) => c.estado == EstadoCompra.recibidaTotal)
         .length;
-    final anuladas = todas.where((c) => c.estado == EstadoCompra.anulada).length;
+    final anuladas = todas
+        .where((c) => c.estado == EstadoCompra.anulada)
+        .length;
     final estadoFiltro = ref.watch(estadoCompraFiltroProvider);
 
     return AppListaPagina<Compra>(

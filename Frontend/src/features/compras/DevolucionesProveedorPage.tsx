@@ -67,6 +67,16 @@ function resolucionBadges(d: DevolucionProveedorResponse) {
 }
 
 /**
+ * Lo que todavía falta que llegue de la reposición. Si ya no falta nada (llegó, o el proveedor no lo trajo y se
+ * descontó en otra devolución) lo dice en vez de mostrar cero.
+ */
+function aReponer(d: DevolucionProveedorResponse) {
+  if (d.montoPorReponer > 0) return <span className="font-semibold text-amber-700">{soles(d.montoPorReponer)}</span>
+  if (d.montoReposicion > 0 && d.estado !== 'ANULADA') return <span className="text-xs font-medium text-emerald-700">Nada pendiente</span>
+  return <span className="text-ink-soft">—</span>
+}
+
+/**
  * Devoluciones a proveedor: lo que llegó mal o no llegó, y qué dio el proveedor a cambio.
  *
  * Dos pestañas: el historial de devoluciones, y los saldos a favor —lo que los proveedores deben devolver porque se
@@ -215,7 +225,8 @@ export function DevolucionesProveedorPage() {
 
   const vigentes = devoluciones.filter((d) => d.estado === 'CONFIRMADA')
   const totalDescontado = vigentes.reduce((s, d) => s + d.montoDescuento, 0)
-  const totalReposicion = vigentes.reduce((s, d) => s + d.montoReposicion, 0)
+  // Solo lo que todavía no llega: una reposición que ya llegó con una recepción ya no se espera.
+  const totalReposicion = vigentes.reduce((s, d) => s + d.montoPorReponer, 0)
   const totalSaldo = saldos.reduce((s, x) => s + x.saldo, 0)
   const visibles = estadoFiltro ? devoluciones.filter((d) => d.estado === estadoFiltro) : devoluciones
 
@@ -243,7 +254,7 @@ export function DevolucionesProveedorPage() {
     { key: 'motivo', label: 'Motivo' },
     { key: 'resolucion', label: 'A cambio', filterable: false, render: resolucionBadges },
     { key: 'montoDescuento', label: 'Descuento', align: 'right', filterable: false, render: (row) => soles(row.montoDescuento) },
-    { key: 'montoReposicion', label: 'A reponer', align: 'right', filterable: false, render: (row) => soles(row.montoReposicion) },
+    { key: 'montoPorReponer', label: 'A reponer', align: 'right', filterable: false, render: aReponer },
     {
       key: 'saldoFavorGenerado',
       label: 'Saldo a favor',
@@ -290,7 +301,23 @@ export function DevolucionesProveedorPage() {
     {
       key: 'resolucion',
       label: 'A cambio',
-      render: (l) => <Badge tone={l.resolucion === 'DESCUENTO' ? 'warning' : 'sys'}>{l.resolucion === 'DESCUENTO' ? 'Descuento' : 'Reposición'}</Badge>,
+      render: (l) =>
+        l.resolucion === 'DESCUENTO' ? (
+          <Badge tone="warning">Descuento</Badge>
+        ) : (
+          <div className="flex flex-col items-start gap-0.5">
+            <Badge tone="sys">Reposición</Badge>
+            {detalle?.estado !== 'ANULADA' && (
+              <span className={`text-xs ${l.cantidadPorReponer > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {l.cantidadPorReponer <= 0
+                  ? 'Nada pendiente'
+                  : l.cantidadPorReponer < l.cantidad
+                    ? `Falta ${Number(l.cantidadPorReponer.toFixed(4))} ${l.unidadBase}`
+                    : 'Por llegar'}
+              </span>
+            )}
+          </div>
+        ),
     },
     { key: 'importe', label: 'Importe', align: 'right', render: (l) => soles(l.importe) },
   ]
@@ -542,7 +569,7 @@ export function DevolucionesProveedorPage() {
               <CifrasPago
                 cifras={[
                   { label: 'Descuento', monto: detalle.montoDescuento, tono: detalle.montoDescuento > 0 ? 'pendiente' : 'normal' },
-                  { label: 'A reponer', monto: detalle.montoReposicion },
+                  { label: 'A reponer', monto: detalle.montoPorReponer, tono: detalle.montoPorReponer > 0 ? 'pendiente' : 'normal' },
                   { label: 'Saldo a favor', monto: detalle.saldoFavorGenerado, tono: detalle.saldoFavorGenerado > 0 ? 'exito' : 'normal' },
                 ]}
               />
