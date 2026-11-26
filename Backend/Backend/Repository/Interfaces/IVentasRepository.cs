@@ -25,6 +25,9 @@ public interface IVentasRepository
     /// <summary>La ruta de un cliente; null si no tiene o no existe.</summary>
     Task<int?> RutaDeClienteAsync(int clienteId);
     Task<Pedido> AddPedidoAsync(Pedido pedido);
+
+    /// <summary>La cotización del portal que se va a atender, rastreada (se guarda junto con el pedido).</summary>
+    Task<Cotizacion?> GetCotizacionAsync(int id);
     Task<Pedido?> GetPedidoAsync(int id, AlcanceFiltro? alcance = null);
     Task<IEnumerable<Pedido>> GetPedidosAsync(string? estado = null, AlcanceFiltro? alcance = null);
     Task UpdatePedidoAsync(Pedido pedido);

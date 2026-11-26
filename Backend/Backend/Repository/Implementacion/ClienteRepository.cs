@@ -123,6 +123,7 @@ public class ClienteRepository : Repository<Cliente>, IClienteRepository
         if (await Context.Pedidos.AnyAsync(p => p.ClienteId == clienteId)) historial.Add("pedidos");
         if (await Context.NotasVenta.AnyAsync(n => n.ClienteId == clienteId)) historial.Add("notas de venta");
         if (await Context.GestionesCliente.AnyAsync(g => g.ClienteId == clienteId)) historial.Add("gestiones");
+        if (await Context.Cotizaciones.AnyAsync(c => c.ClienteId == clienteId)) historial.Add("cotizaciones");
         return historial;
     }
 

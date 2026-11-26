@@ -157,6 +157,9 @@ public static class CatalogoPermisos
 
             // --- Facturación ---
             ["fact.pedidos"] = DocumentoConfirmable,
+            // Las manda el cliente desde el portal: aquí solo se ven y se descartan. Atenderlas es crear el pedido
+            // (fact.pedidos:crear) jalándolas desde el formulario.
+            ["fact.cotizaciones"] = [Accion.Ver, Accion.Anular],
             ["fact.notaventa"] = [.. Documento, Accion.Cobrar],
             ["fact.precios"] = Catalogo,
             // Un submódulo por tipo de comprobante: quien factura no tiene por qué emitir notas de crédito.

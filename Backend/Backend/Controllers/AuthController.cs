@@ -24,11 +24,7 @@ public class AuthController : ControllerBase
         return Ok(response);
     }
 
-    [HttpPost("register")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Register([FromBody] CreateUsuarioRequest request)
-    {
-        var response = await _usuarioService.RegisterAsync(request);
-        return CreatedAtAction(nameof(Register), new { id = response.Id }, response);
-    }
+    // Aquí había un POST "register" anónimo que creaba usuarios del sistema con el rol que se pidiera (incluso
+    // administrador) sin sesión. Ninguna pantalla lo usaba: los usuarios se crean desde Configuración
+    // (UsuarioController, con permiso config.usuarios:crear). Se quitó: no debe volver.
 }

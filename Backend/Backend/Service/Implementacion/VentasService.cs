@@ -6,6 +6,7 @@ using Backend.Models;
 using Backend.Repository.Interfaces;
 using Backend.Service.Interfaces;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Service.Implementacion;
 
@@ -318,11 +319,54 @@ public class VentasService : IVentasService
 
         pedido.Detalle = await ResolverLineasAsync(request.Detalle);
 
-        await _repository.AddPedidoAsync(pedido);
+        // Jalada de una cotización del portal: queda atendida en el MISMO guardado que el pedido. Si dos personas la
+        // jalan a la vez, el índice único de Pedido.CotizacionId deja pasar solo a la primera.
+        var cotizacion = request.CotizacionId is int cotizacionId ? await CotizacionAtendibleAsync(cotizacionId, request.ClienteId) : null;
+        if (cotizacion is not null)
+        {
+            pedido.CotizacionId = cotizacion.Id;
+            cotizacion.Estado = EstadoCotizacion.Atendida;
+            cotizacion.FechaCierre = DateTime.UtcNow;
+            cotizacion.CerradaPorId = usuarioId;
+        }
+
+        try
+        {
+            await _repository.AddPedidoAsync(pedido);
+        }
+        catch (DbUpdateException e) when (cotizacion is not null
+                                          && (e.InnerException?.Message ?? e.Message).Contains("Duplicate", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConflictException($"La cotización {cotizacion.Numero} ya la atendió otra persona.");
+        }
 
         var creado = await GetPedidoAsync(pedido.Id);
         await _notificador.AvisarAsync("pedidos", "creado", creado);
+        if (cotizacion is not null) await _notificador.AvisarAsync("cotizaciones", "atendida", new { cotizacion.Id, PedidoId = pedido.Id });
         return creado;
+    }
+
+    /// <summary>La cotización que se quiere jalar, comprobada: existe, sigue en espera y es de este cliente.</summary>
+    private async Task<Cotizacion> CotizacionAtendibleAsync(int id, int clienteId)
+    {
+        var cotizacion = await _repository.GetCotizacionAsync(id)
+            ?? throw new NotFoundException($"No existe la cotización {id}");
+        if (cotizacion.Estado != EstadoCotizacion.EnEspera)
+        {
+            var estado = cotizacion.Estado switch
+            {
+                EstadoCotizacion.Atendida => "ya se atendió",
+                EstadoCotizacion.Descartada => "se descartó",
+                EstadoCotizacion.Cancelada => "la canceló el cliente",
+                _ => "ya no está en espera",
+            };
+            throw new ConflictException($"La cotización {cotizacion.Numero} {estado}.");
+        }
+        if (cotizacion.ClienteId != clienteId)
+        {
+            throw new BadRequestException($"La cotización {cotizacion.Numero} es de otro cliente.");
+        }
+        return cotizacion;
     }
 
     public async Task<PedidoResponse> ActualizarPedidoAsync(int id, CrearPedidoRequest request)
@@ -1732,6 +1776,8 @@ public class VentasService : IVentasService
         CondicionPago = p.CondicionPago,
         Observacion = p.Observacion,
         Usuario = p.Usuario?.Nombre,
+        CotizacionId = p.CotizacionId,
+        CotizacionNumero = p.Cotizacion?.Numero,
         UsuarioTelefono = TelefonoDe(p.Usuario),
         ReservaStock = p.ReservaStock,
         NotaVentaId = VentaVigente(p)?.Id,

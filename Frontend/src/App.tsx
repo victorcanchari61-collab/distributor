@@ -30,6 +30,8 @@ const pantalla = (cargar: () => Promise<Record<string, unknown>>, nombre: string
 const InicioPage = pantalla(() => import('./features/inicio'), 'InicioPage')
 const MiPerfilPage = pantalla(() => import('./features/perfil'), 'MiPerfilPage')
 const CatalogoPublicoPage = pantalla(() => import('./features/maestros'), 'CatalogoPublicoPage')
+// El portal de clientes: su propio archivo, que solo baja quien entra a /portal.
+const PortalApp = pantalla(() => import('./features/portal/PortalApp'), 'PortalApp')
 
 /** Mientras llega el archivo de la pantalla: algo discreto, sin saltos. */
 function Cargando() {
@@ -59,6 +61,7 @@ const VIEWS: Record<string, ComponentType> = {
   'rrhh.planilla': pantalla(() => import('./features/rrhh'), 'PlanillaPage'),
   'rrhh.adelantos': pantalla(() => import('./features/rrhh'), 'AdelantosPage'),
   'fact.pedidos': pantalla(() => import('./features/facturacion'), 'PedidosPage'),
+  'fact.cotizaciones': pantalla(() => import('./features/facturacion'), 'CotizacionesPage'),
   'fact.notaventa': pantalla(() => import('./features/facturacion'), 'NotasVentaPage'),
   'fact.precios': pantalla(() => import('./features/facturacion'), 'ListasPreciosPage'),
   'inv.almacenes': pantalla(() => import('./features/inventario'), 'AlmacenesPage'),
@@ -131,6 +134,16 @@ function App() {
     return (
       <Suspense fallback={<Cargando />}>
         <CatalogoPublicoPage />
+      </Suspense>
+    )
+  }
+
+  // El portal de clientes (/portal, y los enlaces de invitación y recuperación): también fuera del panel y con su
+  // propia sesión, que no se mezcla con la del personal.
+  if (location.pathname === '/portal' || location.pathname.startsWith('/portal/')) {
+    return (
+      <Suspense fallback={<Cargando />}>
+        <PortalApp />
       </Suspense>
     )
   }

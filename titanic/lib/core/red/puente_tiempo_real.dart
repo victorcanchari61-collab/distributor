@@ -54,6 +54,8 @@ final Map<String, List<ProviderOrFamily>> _providersPorModulo = {
     visitasProvider,
     resumenVisitasProvider,
   ],
+  // Las manda el cliente desde el portal web; se atienden al crear el pedido.
+  'cotizaciones': [cotizacionesProvider],
   'notasventa': [
     notasVentaProvider,
     cuentasPorCobrarProvider,

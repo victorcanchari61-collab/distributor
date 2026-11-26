@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../compartido/estado/filtro_documento.dart';
 import '../../auth/estado/auth_controlador.dart';
+import '../datos/cotizacion.dart';
 import '../datos/nota_venta.dart';
 import '../datos/pedido.dart';
 import '../datos/ventas_api.dart';
@@ -59,6 +60,8 @@ class PedidosControlador extends AsyncNotifier<List<Pedido>> {
   Future<void> crear(Map<String, dynamic> cuerpo) async {
     await ref.read(ventasApiProvider).crearPedido(cuerpo);
     await recargar();
+    // Jalada de una cotizacion: ya no esta en espera.
+    if (cuerpo['cotizacionId'] != null) ref.invalidate(cotizacionesProvider);
   }
 
   Future<void> actualizar(int id, Map<String, dynamic> cuerpo) async {
@@ -371,3 +374,50 @@ final recojosPendientesProvider =
     AsyncNotifierProvider<RecojosPendientesControlador, List<RecojoPendiente>>(
       RecojosPendientesControlador.new,
     );
+
+// --- Cotizaciones del portal ---
+
+final busquedaCotizacionesProvider = StateProvider.autoDispose((ref) => '');
+
+/// La bandeja arranca en las que esperan: es lo que hay que atender.
+final estadoCotizacionFiltroProvider = StateProvider.autoDispose<String?>(
+  (ref) => EstadoCotizacion.enEspera,
+);
+
+/// Las cotizaciones que los clientes mandan desde el portal web. El vendedor
+/// las atiende jalandolas al crear el pedido, o las descarta.
+class CotizacionesControlador extends AsyncNotifier<List<Cotizacion>> {
+  @override
+  Future<List<Cotizacion>> build() =>
+      ref.watch(ventasApiProvider).cotizaciones();
+
+  Future<void> recargar() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(ventasApiProvider).cotizaciones(),
+    );
+  }
+
+  Future<void> descartar(int id, String motivo) async {
+    await ref.read(ventasApiProvider).descartarCotizacion(id, motivo);
+    await recargar();
+  }
+}
+
+final cotizacionesProvider =
+    AsyncNotifierProvider<CotizacionesControlador, List<Cotizacion>>(
+      CotizacionesControlador.new,
+    );
+
+final cotizacionesFiltradasProvider = Provider.autoDispose<List<Cotizacion>>((
+  ref,
+) {
+  final todas =
+      ref.watch(cotizacionesProvider).valueOrNull ?? const <Cotizacion>[];
+  final texto = ref.watch(busquedaCotizacionesProvider).trim().toLowerCase();
+  final estado = ref.watch(estadoCotizacionFiltroProvider);
+  return todas
+      .where((c) => estado == null || c.estado == estado)
+      .where((c) => texto.isEmpty || c.buscable.contains(texto))
+      .toList();
+});

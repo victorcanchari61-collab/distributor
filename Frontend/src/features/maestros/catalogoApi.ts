@@ -6,6 +6,8 @@ export interface CatalogoEscalon {
 }
 
 export interface CatalogoPresentacion {
+  /** Solo en el catálogo del portal (con sesión): para agregarla al carrito. El público no expone ids. */
+  id?: number
   /** Como se lee: "Saco 50 kg", "Caja x 12". */
   nombre: string
   unidad: string
@@ -22,6 +24,9 @@ export interface CatalogoPresentacion {
 export interface CatalogoProducto {
   /** Solo del cliente (índice): el API público no expone ids internos. Sirve de `key` al pintar. */
   clave: number
+  /** Solo en el catálogo del portal (con sesión). */
+  id?: number
+  codigo?: string
   nombre: string
   descripcion: string | null
   categoria: string | null

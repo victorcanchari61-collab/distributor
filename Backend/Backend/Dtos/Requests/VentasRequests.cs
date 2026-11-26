@@ -48,6 +48,12 @@ public class CrearPedidoRequest
     /// <summary>Requerido cuando <see cref="ReservaStock"/> es true.</summary>
     public int? AlmacenId { get; set; }
 
+    /// <summary>
+    /// Solo al crear: la cotización del portal que se jaló para armar este pedido. Queda atendida con este pedido.
+    /// Al editar se ignora.
+    /// </summary>
+    public int? CotizacionId { get; set; }
+
     public List<LineaVentaRequest> Detalle { get; set; } = [];
 }
 

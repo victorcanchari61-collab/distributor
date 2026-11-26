@@ -21,15 +21,24 @@ import '../../inventario/estado/inventario_controlador.dart';
 import '../../maestros/datos/cliente.dart';
 import '../../maestros/datos/producto.dart';
 import '../../maestros/estado/maestros_controlador.dart';
+import '../datos/cotizacion.dart';
 import '../datos/pedido.dart';
 import '../estado/ventas_controlador.dart';
 import '../../../compartido/widgets/app_aviso.dart';
+import '../../../compartido/widgets/app_hoja.dart';
 
 /// Alta y edicion de un pedido. Solo se edita mientras esta Pendiente.
+///
+/// Un pedido nuevo se puede armar con una cotizacion que mando el cliente desde
+/// el portal web: llega ya jalada desde la bandeja ([cotizacion]) o se jala con
+/// el boton de arriba. Al guardarlo, la cotizacion queda atendida.
 class PedidoFormulario extends ConsumerStatefulWidget {
-  const PedidoFormulario({super.key, this.pedido});
+  const PedidoFormulario({super.key, this.pedido, this.cotizacion});
 
   final Pedido? pedido;
+
+  /// La cotizacion del portal con la que se arma este pedido nuevo.
+  final Cotizacion? cotizacion;
 
   @override
   ConsumerState<PedidoFormulario> createState() => _PedidoFormularioState();
@@ -37,15 +46,25 @@ class PedidoFormulario extends ConsumerStatefulWidget {
 
 class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
   late final _observacion = TextEditingController(
-    text: widget.pedido?.observacion ?? '',
+    text: widget.pedido?.observacion ?? _notaDe(widget.cotizacion) ?? '',
   );
 
-  late int? _clienteId = widget.pedido?.clienteId;
-  late String? _clienteNombre = widget.pedido?.cliente;
+  late int? _clienteId =
+      widget.pedido?.clienteId ?? widget.cotizacion?.clienteId;
+  late String? _clienteNombre =
+      widget.pedido?.cliente ?? widget.cotizacion?.cliente;
+
+  /// La cotizacion jalada: al guardar el pedido queda atendida.
+  late Cotizacion? _cotizacion = widget.cotizacion;
+
+  /// Sus lineas esperan al catalogo (como las de un pedido existente): sin el,
+  /// no habria presentaciones que ofrecer para cambiar de unidad.
+  late Cotizacion? _cotizacionPorPoner = widget.cotizacion;
 
   /// Lo que debe el cliente elegido, para avisarlo bajo el campo. Nulo si no debe o si no se eligió ahora.
   String? _clienteDeuda;
-  late final int? _listaPrecioId = widget.pedido?.listaPrecioId;
+  late int? _listaPrecioId =
+      widget.pedido?.listaPrecioId ?? widget.cotizacion?.listaPrecioId;
   late String _condicionPago =
       widget.pedido?.condicionPago ?? CondicionPago.contado;
   late bool _reservaStock = widget.pedido?.reservaStock ?? false;
@@ -89,6 +108,89 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() => _lineas.addAll(nuevas));
+    });
+  }
+
+  /// La nota del cliente, con el numero de la cotizacion delante.
+  static String? _notaDe(Cotizacion? c) {
+    if (c?.nota == null) return null;
+    final texto = '${c!.numero}: ${c.nota}';
+    return texto.length > 250 ? texto.substring(0, 250) : texto;
+  }
+
+  List<LineaDocumento> _lineasDe(Cotizacion c, List<Producto> catalogo) {
+    final porId = {for (final p in catalogo) p.id: p};
+    return [
+      for (final l in c.detalle)
+        LineaDocumento(
+          productoId: l.productoId,
+          producto: l.producto,
+          codigo: porId[l.productoId]?.codigo ?? l.codigo,
+          unidadBase: porId[l.productoId]?.unidadBase ?? '',
+          presentaciones:
+              porId[l.productoId]?.presentaciones ?? const <Presentacion>[],
+          uso: UsoPresentacion.venta,
+          presentacionId: l.presentacionId,
+          cantidad: l.cantidad,
+          // El precio que vio el cliente: el vendedor lo corrige si cambio.
+          importe: l.precioPresentacion,
+        ),
+    ];
+  }
+
+  void _ponerLineasDeCotizacion(List<Producto> catalogo) {
+    final c = _cotizacionPorPoner;
+    if (c == null || catalogo.isEmpty) return;
+    _cotizacionPorPoner = null;
+    final nuevas = _lineasDe(c, catalogo);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(
+          () => _lineas
+            ..clear()
+            ..addAll(nuevas),
+        );
+      }
+    });
+  }
+
+  /// Jalar una cotizacion en espera: el pedido queda con su cliente, sus
+  /// productos, los precios que vio el cliente y su nota.
+  Future<void> _jalar() async {
+    final elegida = await mostrarHoja<Cotizacion>(
+      context,
+      titulo: 'Jalar cotización',
+      subtitulo: _clienteId == null
+          ? 'Las que mandaron tus clientes y siguen en espera'
+          : 'Las de ${_clienteNombre ?? 'este cliente'} en espera',
+      cuerpo: _ListaJalar(
+        cargar: ref
+            .read(ventasApiProvider)
+            .cotizaciones(
+              estado: EstadoCotizacion.enEspera,
+              clienteId: _clienteId,
+            ),
+      ),
+    );
+    if (elegida == null || !mounted) return;
+    final catalogo =
+        ref.read(productosProvider).valueOrNull ?? const <Producto>[];
+    setState(() {
+      _cotizacion = elegida;
+      _clienteId = elegida.clienteId;
+      _clienteNombre = elegida.cliente;
+      _clienteDeuda = null;
+      _errorCliente = null;
+      _listaPrecioId = elegida.listaPrecioId;
+      _observacion.text = _notaDe(elegida) ?? '';
+      if (catalogo.isEmpty) {
+        _cotizacionPorPoner = elegida;
+      } else {
+        _lineas
+          ..clear()
+          ..addAll(_lineasDe(elegida, catalogo));
+      }
+      _errorLineas = null;
     });
   }
 
@@ -176,6 +278,8 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
           : _observacion.text.trim(),
       'reservaStock': _reservaStock,
       'almacenId': _reservaStock ? _almacenReservaId : null,
+      // Solo al crear: la cotizacion jalada queda atendida con este pedido.
+      if (_esNuevo) 'cotizacionId': _cotizacion?.id,
       'detalle': [
         for (final f in _lineas)
           {
@@ -197,7 +301,13 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
       }
 
       navegador.pop();
-      mensajero.mostrar(_esNuevo ? 'Pedido creado' : 'Pedido actualizado');
+      mensajero.mostrar(
+        !_esNuevo
+            ? 'Pedido actualizado'
+            : _cotizacion != null
+            ? 'Pedido creado: ${_cotizacion!.numero} quedó atendida'
+            : 'Pedido creado',
+      );
     } on ApiExcepcion catch (e) {
       setState(() {
         _guardando = false;
@@ -272,6 +382,9 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
     _ponerLineasExistentes(
       ref.watch(productosProvider).valueOrNull ?? const <Producto>[],
     );
+    _ponerLineasDeCotizacion(
+      ref.watch(productosProvider).valueOrNull ?? const <Producto>[],
+    );
 
     // Su propio Scaffold: no cuelga de AppShell, asi que declara aqui el
     // acento del modulo. Sin esto los componentes compartidos y las hojas que
@@ -288,12 +401,28 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
             preferredSize: Size.fromHeight(1),
             child: Divider(height: 1),
           ),
+          // Lo que el cliente mando desde el portal: arma el pedido con eso.
+          actions: [
+            if (_esNuevo)
+              TextButton.icon(
+                onPressed: _guardando ? null : _jalar,
+                icon: const Icon(Icons.request_quote_outlined, size: 18),
+                label: const Text('Jalar'),
+              ),
+          ],
         ),
         body: ListView(
           padding: const EdgeInsets.all(Dimen.espacio4),
           children: [
             if (_error != null) ...[
               AppAlerta(_error!),
+              const SizedBox(height: Dimen.espacio4),
+            ],
+            if (_cotizacion != null) ...[
+              _AvisoCotizacion(
+                numero: _cotizacion!.numero,
+                onSoltar: () => setState(() => _cotizacion = null),
+              ),
               const SizedBox(height: Dimen.espacio4),
             ],
 
@@ -313,6 +442,11 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
               error: _errorCliente,
               habilitado: !_guardando,
               onElegir: (c) => setState(() {
+                // La cotizacion es de un cliente: cambiarlo la suelta (sus
+                // productos se quedan, por si sirven).
+                if (_cotizacion != null && c.id != _clienteId) {
+                  _cotizacion = null;
+                }
                 _clienteId = c.id;
                 _clienteNombre = c.nombre;
                 _clienteDeuda = c.textoDeuda;
@@ -456,6 +590,118 @@ class _PedidoFormularioState extends ConsumerState<PedidoFormulario> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// "Armado con la cotizacion CT-0004", con la opcion de soltarla.
+class _AvisoCotizacion extends StatelessWidget {
+  const _AvisoCotizacion({required this.numero, required this.onSoltar});
+
+  final String numero;
+  final VoidCallback onSoltar;
+
+  @override
+  Widget build(BuildContext context) {
+    final acento = Acento.de(context);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        Dimen.espacio3,
+        Dimen.espacio2,
+        Dimen.espacio1,
+        Dimen.espacio2,
+      ),
+      decoration: BoxDecoration(
+        color: acento.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(Dimen.radioCampo),
+        border: Border.all(color: acento.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.request_quote_outlined, size: 20, color: acento),
+          const SizedBox(width: Dimen.espacio2),
+          Expanded(
+            child: Text(
+              'Armado con la cotización $numero: al guardar queda atendida. '
+              'Revisa precios y cantidades.',
+              style: const TextStyle(fontSize: 13, color: Colores.tinta),
+            ),
+          ),
+          TextButton(onPressed: onSoltar, child: const Text('Soltar')),
+        ],
+      ),
+    );
+  }
+}
+
+/// Las cotizaciones en espera para elegir una. Devuelve la elegida al cerrar.
+class _ListaJalar extends StatelessWidget {
+  const _ListaJalar({required this.cargar});
+
+  final Future<List<Cotizacion>> cargar;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Cotizacion>>(
+      future: cargar,
+      builder: (context, foto) {
+        if (foto.hasError) {
+          final e = foto.error;
+          return AppAlerta(
+            e is ApiExcepcion ? e.texto : 'No pudimos cargar las cotizaciones.',
+          );
+        }
+        if (!foto.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(Dimen.espacio5),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final lista = foto.data!;
+        if (lista.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: Dimen.espacio5),
+            child: Text(
+              'No hay cotizaciones en espera. Aparecen aquí apenas el cliente '
+              'las manda desde el portal.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colores.tintaSuave),
+            ),
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final c in lista)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.request_quote_outlined,
+                  color: Acento.de(context),
+                ),
+                title: Text(
+                  '${c.numero} · ${c.cliente}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colores.tinta,
+                  ),
+                ),
+                subtitle: Text(
+                  '${c.detalle.length} '
+                  '${c.detalle.length == 1 ? 'producto' : 'productos'} · '
+                  'S/ ${c.total.toStringAsFixed(2)}'
+                  '${c.nota == null ? '' : '\nNota: ${c.nota}'}',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+                trailing: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(c),
+                  child: const Text('Jalar'),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

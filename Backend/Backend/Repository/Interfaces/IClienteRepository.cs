@@ -29,8 +29,8 @@ public interface IClienteRepository : IRepository<Cliente>
     Task<bool> ExistsByDocumentoAsync(string documento, int? excludeId = null);
 
     /// <summary>
-    /// Lo que tiene registrado y no se puede perder (pedidos, notas de venta, gestiones), por nombre: vacío si se puede
-    /// borrar.
+    /// Lo que tiene registrado y no se puede perder (pedidos, notas de venta, gestiones, cotizaciones del portal), por
+    /// nombre: vacío si se puede borrar. Su acceso al portal y sus favoritos se borran con él.
     /// </summary>
     Task<List<string>> HistorialQueImpideBorrarAsync(int clienteId);
 

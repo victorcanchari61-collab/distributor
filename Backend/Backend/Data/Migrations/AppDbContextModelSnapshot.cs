@@ -22,6 +22,72 @@ namespace Backend.Data.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Backend.Models.AccesoCliente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FechaActivacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("FechaInvitacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("InvitadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<DateTime?>("TokenExpira")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("TokenTipo")
+                        .HasMaxLength(15)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<DateTime?>("UltimoIngreso")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Usuario")
+                        .HasMaxLength(40)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<int>("VersionSesion")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId")
+                        .IsUnique();
+
+                    b.HasIndex("InvitadoPorId");
+
+                    b.HasIndex("TokenHash");
+
+                    b.HasIndex("Usuario")
+                        .IsUnique();
+
+                    b.ToTable("AccesosCliente", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Models.AdelantoEmpleado", b =>
                 {
                     b.Property<int>("Id")
@@ -668,6 +734,33 @@ namespace Backend.Data.Migrations
                     b.ToTable("ClientesCategoria", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.ClienteFavorito", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductoId");
+
+                    b.HasIndex("ClienteId", "ProductoId")
+                        .IsUnique();
+
+                    b.ToTable("ClienteFavoritos", (string)null);
+                });
+
             modelBuilder.Entity("Backend.Models.Compra", b =>
                 {
                     b.Property<int>("Id")
@@ -1200,6 +1293,112 @@ namespace Backend.Data.Migrations
                     b.HasIndex("MovimientoId");
 
                     b.ToTable("ConsumosCapa", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.Cotizacion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("CerradaPorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("varchar(15)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("FechaCierre")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("ListaPrecioId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MotivoDescarte")
+                        .HasMaxLength(250)
+                        .HasColumnType("varchar(250)");
+
+                    b.Property<string>("Nota")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("VendedorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CerradaPorId");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("ListaPrecioId");
+
+                    b.HasIndex("Numero")
+                        .IsUnique();
+
+                    b.HasIndex("VendedorId");
+
+                    b.HasIndex("Estado", "Fecha");
+
+                    b.ToTable("Cotizaciones", (string)null);
+                });
+
+            modelBuilder.Entity("Backend.Models.CotizacionDetalle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Cantidad")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("CotizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PrecioPresentacion")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("PresentacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CotizacionId");
+
+                    b.HasIndex("PresentacionId");
+
+                    b.HasIndex("ProductoId");
+
+                    b.ToTable("CotizacionDetalle", (string)null);
                 });
 
             modelBuilder.Entity("Backend.Models.CuentaFinanciera", b =>
@@ -3651,6 +3850,9 @@ namespace Backend.Data.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("CotizacionId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(15)
@@ -3685,6 +3887,9 @@ namespace Backend.Data.Migrations
                     b.HasIndex("AlmacenId");
 
                     b.HasIndex("ClienteId");
+
+                    b.HasIndex("CotizacionId")
+                        .IsUnique();
 
                     b.HasIndex("Fecha");
 
@@ -5439,6 +5644,24 @@ namespace Backend.Data.Migrations
                     b.ToTable("Vehiculos", (string)null);
                 });
 
+            modelBuilder.Entity("Backend.Models.AccesoCliente", b =>
+                {
+                    b.HasOne("Backend.Models.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Usuario", "InvitadoPor")
+                        .WithMany()
+                        .HasForeignKey("InvitadoPorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("InvitadoPor");
+                });
+
             modelBuilder.Entity("Backend.Models.AdelantoEmpleado", b =>
                 {
                     b.HasOne("Backend.Models.CuentaFinanciera", "CuentaFinanciera")
@@ -5645,6 +5868,25 @@ namespace Backend.Data.Migrations
                     b.Navigation("Cliente");
                 });
 
+            modelBuilder.Entity("Backend.Models.ClienteFavorito", b =>
+                {
+                    b.HasOne("Backend.Models.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Producto");
+                });
+
             modelBuilder.Entity("Backend.Models.Compra", b =>
                 {
                     b.HasOne("Backend.Models.OrdenCompra", "OrdenCompra")
@@ -5793,6 +6035,65 @@ namespace Backend.Data.Migrations
                     b.Navigation("Capa");
 
                     b.Navigation("Movimiento");
+                });
+
+            modelBuilder.Entity("Backend.Models.Cotizacion", b =>
+                {
+                    b.HasOne("Backend.Models.Usuario", "CerradaPor")
+                        .WithMany()
+                        .HasForeignKey("CerradaPorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Backend.Models.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.ListaPrecio", "ListaPrecio")
+                        .WithMany()
+                        .HasForeignKey("ListaPrecioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Backend.Models.Usuario", "Vendedor")
+                        .WithMany()
+                        .HasForeignKey("VendedorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CerradaPor");
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("ListaPrecio");
+
+                    b.Navigation("Vendedor");
+                });
+
+            modelBuilder.Entity("Backend.Models.CotizacionDetalle", b =>
+                {
+                    b.HasOne("Backend.Models.Cotizacion", "Cotizacion")
+                        .WithMany("Detalle")
+                        .HasForeignKey("CotizacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.ProductoPresentacion", "Presentacion")
+                        .WithMany()
+                        .HasForeignKey("PresentacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cotizacion");
+
+                    b.Navigation("Presentacion");
+
+                    b.Navigation("Producto");
                 });
 
             modelBuilder.Entity("Backend.Models.CuentaFinanciera", b =>
@@ -6627,6 +6928,11 @@ namespace Backend.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Backend.Models.Cotizacion", "Cotizacion")
+                        .WithMany()
+                        .HasForeignKey("CotizacionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Backend.Models.ListaPrecio", "ListaPrecio")
                         .WithMany()
                         .HasForeignKey("ListaPrecioId")
@@ -6640,6 +6946,8 @@ namespace Backend.Data.Migrations
                     b.Navigation("Almacen");
 
                     b.Navigation("Cliente");
+
+                    b.Navigation("Cotizacion");
 
                     b.Navigation("ListaPrecio");
 
@@ -7240,6 +7548,11 @@ namespace Backend.Data.Migrations
             modelBuilder.Entity("Backend.Models.Conductor", b =>
                 {
                     b.Navigation("Vehiculos");
+                });
+
+            modelBuilder.Entity("Backend.Models.Cotizacion", b =>
+                {
+                    b.Navigation("Detalle");
                 });
 
             modelBuilder.Entity("Backend.Models.Despacho", b =>

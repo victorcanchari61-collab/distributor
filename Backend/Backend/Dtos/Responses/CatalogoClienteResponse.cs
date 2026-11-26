@@ -50,6 +50,13 @@ public class CatalogoProductoResponse
 
 public class CatalogoPresentacionResponse
 {
+    /// <summary>
+    /// La presentación, para agregarla al carrito del portal. El catálogo público (sin sesión) no la manda: no expone
+    /// ids internos.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public int? Id { get; set; }
+
     /// <summary>Como se lee: "Saco 50 kg", "Caja x 12".</summary>
     public string Nombre { get; set; } = string.Empty;
 

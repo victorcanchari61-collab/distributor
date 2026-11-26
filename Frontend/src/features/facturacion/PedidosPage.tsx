@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { idUnico } from '../../lib/ids'
 import { fechaCorta } from '../../lib/fechas'
-import { ArrowLeft, CheckCircle2, ClipboardList, PackageX, Plus } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ClipboardList, MessageSquareQuote, PackageX, Plus, X } from 'lucide-react'
 import { FaBagShopping, FaClockRotateLeft, FaEye, FaPencil, FaRotateLeft, FaTrash } from 'react-icons/fa6'
 import {
   AccionPdf,
@@ -44,6 +45,9 @@ import { listaPrecioApi } from './listaPrecioApi'
 import type { ListaPrecioResponse } from './listaPrecioApi'
 import { pedidoApi } from './ventasApi'
 import { EntregaPedidoModal, NoEntregadoModal } from './EntregaPedidoModal'
+import { JalarCotizacionModal } from './JalarCotizacionModal'
+import { cotizacionApi } from './cotizacionApi'
+import type { Cotizacion } from './cotizacionApi'
 import type { AuditoriaResponse } from '../config'
 import type { CrearPedidoRequest, FormaPagoVenta, LineaVentaResponse, OpcionesFiltroVentas, PedidoFila, PedidoResponse, ResumenPedidos } from './ventasApi'
 
@@ -104,6 +108,11 @@ export function PedidosPage() {
   const [reservaStock, setReservaStock] = useState(false)
   const [almacenReservaId, setAlmacenReservaId] = useState(0)
   const [filas, setFilas] = useState<FilaPedido[]>([])
+  /** La cotización del portal que se jaló para este pedido nuevo: al guardarlo queda atendida. */
+  const [cotizacion, setCotizacion] = useState<Pick<Cotizacion, 'id' | 'numero'> | null>(null)
+  const [jalarAbierto, setJalarAbierto] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
   const [stockMap, setStockMap] = useState<Record<number, number>>({})
   /** Lo que apartan otros pedidos pendientes, por producto: el panel lo muestra como aviso. */
   const [reservadoMap, setReservadoMap] = useState<Record<number, number>>({})
@@ -194,6 +203,7 @@ export function PedidosPage() {
 
   const abrirNuevo = () => {
     setEditando(null)
+    setCotizacion(null)
     setClienteId(0)
     setClienteNombre('')
     setListaPrecioId(0)
@@ -207,6 +217,7 @@ export function PedidosPage() {
 
   const abrirEdicion = (pedido: PedidoResponse) => {
     setEditando(pedido)
+    setCotizacion(null)
     setClienteId(pedido.clienteId)
     setClienteNombre(pedido.cliente)
     setListaPrecioId(pedido.listaPrecioId ?? 0)
@@ -232,6 +243,52 @@ export function PedidosPage() {
     )
     setVista('form')
   }
+
+  /*
+   * Jalar una cotización del portal: el pedido nuevo queda con su cliente, sus productos, los precios que vio el
+   * cliente y su nota. Todo se puede corregir antes de guardar; al guardar, la cotización queda atendida.
+   */
+  const jalarCotizacion = (c: Cotizacion) => {
+    setEditando(null)
+    setCotizacion({ id: c.id, numero: c.numero })
+    setClienteId(c.clienteId)
+    setClienteNombre(c.cliente)
+    setListaPrecioId(c.listaPrecioId ?? 0)
+    setCondicionPago('CONTADO')
+    setObservacion(c.nota ? `${c.numero}: ${c.nota}`.slice(0, 250) : '')
+    setReservaStock(false)
+    setAlmacenReservaId(primerAlmacenId)
+    setFilas(
+      c.detalle.map((l) => ({
+        id: idUnico(),
+        productoId: l.productoId,
+        presentacionId: l.presentacionId,
+        cantidad: String(l.cantidad),
+        costo: String(l.precioPresentacion),
+        lote: '',
+        fechaVencimiento: '',
+      })),
+    )
+    setJalarAbierto(false)
+    setVista('form')
+  }
+
+  // Desde la bandeja de Cotizaciones ("Crear pedido"): se abre el formulario ya jalado.
+  const desdeCotizacionId = (location.state as { desdeCotizacionId?: number } | null)?.desdeCotizacionId
+  useEffect(() => {
+    if (!desdeCotizacionId) return
+    navigate(location.pathname, { replace: true, state: null })
+    cotizacionApi
+      .getById(desdeCotizacionId)
+      .then((c) =>
+        c.estado === 'EN_ESPERA'
+          ? jalarCotizacion(c)
+          : toast.error(`${c.numero} ya no está en espera: no se puede jalar.`),
+      )
+      .catch((e) => toast.error(e instanceof ApiError ? e.message : 'No pudimos abrir la cotización.'))
+    // Solo cuando llega desde la bandeja: el resto de lo que usa no debe volver a dispararlo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desdeCotizacionId])
 
   // La fila del listado no trae las líneas: el pedido completo se pide al abrirlo.
   const conPedidoCompleto = async (id: number, abrir: (pedido: PedidoResponse) => void) => {
@@ -289,6 +346,8 @@ export function PedidosPage() {
    * vuelve a "la predeterminada", no se queda la del cliente anterior.
    */
   const elegirCliente = (cliente: ClienteOpcion | null) => {
+    // La cotización es de un cliente: cambiarlo la suelta (sus productos se quedan, por si sirven).
+    if (cotizacion && cliente?.id !== clienteId) setCotizacion(null)
     setClienteId(cliente?.id ?? 0)
     setClienteNombre(cliente?.nombre ?? '')
     setListaPrecioId(cliente?.listaPrecioId ?? 0)
@@ -316,6 +375,7 @@ export function PedidosPage() {
       observacion: observacion.trim() || null,
       reservaStock,
       almacenId: reservaStock ? almacenReservaId : null,
+      cotizacionId: editando ? null : (cotizacion?.id ?? null),
       detalle: validas.map((f) => ({
         id: f.lineaId ?? null,
         productoId: f.productoId,
@@ -334,7 +394,7 @@ export function PedidosPage() {
       }
       setVista('lista')
       await cargar()
-      toast.exito(editando ? 'Pedido actualizado' : 'Pedido creado')
+      toast.exito(editando ? 'Pedido actualizado' : cotizacion ? `Pedido creado: ${cotizacion.numero} quedó atendida` : 'Pedido creado')
     } catch (e) {
       toast.error(
         e instanceof ApiError ? (e.errors.length ? e.errors.join(' ') : e.message) : 'No pudimos guardar el pedido.',
@@ -625,11 +685,48 @@ export function PedidosPage() {
           title={editando ? `Editar ${editando.numero}` : 'Nuevo pedido'}
           description="Lo que pide el cliente."
           actions={
-            <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
-              <ArrowLeft size={15} />
-              Volver
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Lo que el cliente mandó desde el portal: arma el pedido con eso. */}
+              {!editando && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setJalarAbierto(true)}
+                  iconRight={<MessageSquareQuote size={15} />}
+                >
+                  Jalar cotización
+                </Button>
+              )}
+              <Button variant="secondary" size="sm" onClick={() => setVista('lista')}>
+                <ArrowLeft size={15} />
+                Volver
+              </Button>
+            </div>
           }
+        />
+
+        {cotizacion && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[rgb(var(--sys-rgb)/0.35)] bg-[rgb(var(--sys-rgb)/0.06)] px-4 py-2.5 text-sm">
+            <span className="text-ink">
+              Armado con la cotización <strong>{cotizacion.numero}</strong>: al guardar el pedido queda atendida. Revisa
+              precios y cantidades antes.
+            </span>
+            <button
+              type="button"
+              onClick={() => setCotizacion(null)}
+              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink-muted hover:bg-white hover:text-ink"
+            >
+              <X size={13} /> Soltar cotización
+            </button>
+          </div>
+        )}
+
+        <JalarCotizacionModal
+          abierto={jalarAbierto}
+          clienteId={clienteId}
+          clienteNombre={clienteNombre}
+          onCerrar={() => setJalarAbierto(false)}
+          onElegir={jalarCotizacion}
         />
 
 

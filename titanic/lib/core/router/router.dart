@@ -69,6 +69,7 @@ import '../../features/tms/vistas/rutas_pagina.dart';
 import '../../features/ventas/vistas/notas_venta_pagina.dart';
 import '../../features/facturacion/vistas/comprobantes_pagina.dart';
 import '../../features/ventas/vistas/pedidos_pagina.dart';
+import '../../features/ventas/vistas/cotizaciones_pagina.dart';
 import '../navegacion/menu.dart';
 import '../permisos/puerta_permiso.dart';
 import 'puerta_sesion.dart';
@@ -265,6 +266,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: PedidosPagina.ruta,
         builder: (context, estado) =>
             const PuertaPermiso(child: PedidosPagina()),
+      ),
+      GoRoute(
+        path: CotizacionesPagina.ruta,
+        builder: (context, estado) =>
+            const PuertaPermiso(child: CotizacionesPagina()),
       ),
       GoRoute(
         path: NotasVentaPagina.ruta,
@@ -491,6 +497,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               item.ruta != AccesosPagina.ruta &&
               item.ruta != AuditoriaPagina.ruta &&
               item.ruta != PedidosPagina.ruta &&
+              item.ruta != CotizacionesPagina.ruta &&
               item.ruta != NotasVentaPagina.ruta &&
               item.ruta != FacturasPagina.ruta &&
               item.ruta != BoletasPagina.ruta &&

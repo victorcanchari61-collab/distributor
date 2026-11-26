@@ -1,4 +1,5 @@
 import '../../../core/red/cliente_api.dart';
+import 'cotizacion.dart';
 import 'nota_venta.dart';
 import 'pedido.dart';
 
@@ -7,6 +8,40 @@ class VentasApi {
   const VentasApi(this._api);
 
   final ClienteApi _api;
+
+  // --- Cotizaciones (las manda el cliente desde el portal web) ---
+
+  /// GET /api/cotizacion. Con [clienteId] y estado EN_ESPERA: las que se pueden
+  /// jalar a un pedido de ese cliente.
+  Future<List<Cotizacion>> cotizaciones({
+    String? estado,
+    int? clienteId,
+  }) async {
+    final query = {
+      'estado': ?estado,
+      if (clienteId != null) 'clienteId': '$clienteId',
+    };
+    final datos =
+        await _api.get(
+              query.isEmpty
+                  ? '/cotizacion'
+                  : '/cotizacion?${Uri(queryParameters: query).query}',
+            )
+            as List;
+    return datos
+        .map((e) => Cotizacion.desdeJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// PATCH /api/cotizacion/{id}/descartar. El motivo lo ve el cliente.
+  Future<Cotizacion> descartarCotizacion(int id, String motivo) async =>
+      Cotizacion.desdeJson(
+        await _api.patch(
+              '/cotizacion/$id/descartar',
+              cuerpo: {'motivo': motivo},
+            )
+            as Map<String, dynamic>,
+      );
 
   // --- Pedidos ---
 

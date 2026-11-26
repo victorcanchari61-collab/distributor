@@ -106,7 +106,33 @@ export interface ResumenClientes {
   mercados: string[]
 }
 
+/** El acceso de un cliente al portal de cotizaciones. */
+export interface AccesoPortal {
+  estado: 'SIN_INVITAR' | 'INVITADO' | 'ACTIVO' | 'DESACTIVADO'
+  usuario: string | null
+  fechaInvitacion: string | null
+  invitadoPor: string | null
+  invitacionVence: string | null
+  fechaActivacion: string | null
+  ultimoIngreso: string | null
+  telefono: string | null
+}
+
+export interface InvitacionPortal {
+  enlace: string
+  vence: string
+  enviadoPorWhatsApp: boolean
+  motivoNoEnviado: string | null
+  acceso: AccesoPortal
+}
+
 export const clienteApi = {
+  /** Si puede entrar al portal de cotizaciones y desde cuándo. */
+  portal: (id: number) => api.get<AccesoPortal>(`/cliente/${id}/portal`),
+  /** Le manda por WhatsApp el enlace para crear su usuario y contraseña (y lo devuelve para copiarlo). */
+  invitarPortal: (id: number) => api.post<InvitacionPortal>(`/cliente/${id}/portal/invitar`),
+  portalActivo: (id: number, activo: boolean) => api.patch<AccesoPortal>(`/cliente/${id}/portal/activo`, { activo }),
+
   /** Todos, sin paginar: para los buscadores de cliente de otras pantallas. */
   /**
    * Todos. Con `para` deja solo los que quien pide puede vender (los de su ruta si tiene el alcance

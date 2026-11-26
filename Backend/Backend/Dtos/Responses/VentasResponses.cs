@@ -58,6 +58,10 @@ public class PedidoResponse
     public string? Observacion { get; set; }
     public string? Usuario { get; set; }
 
+    /// <summary>La cotización del portal de la que salió (CT-0001), si se jaló una.</summary>
+    public int? CotizacionId { get; set; }
+    public string? CotizacionNumero { get; set; }
+
     /// <summary>
     /// El teléfono de quien atendió, para el papel: el cliente lo llama a él.
     /// El del usuario; si no tiene, el de su ficha de empleado.

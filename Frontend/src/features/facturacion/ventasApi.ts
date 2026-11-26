@@ -136,6 +136,8 @@ export interface CrearPedidoRequest {
   reservaStock: boolean
   /** Requerido cuando reservaStock es true. */
   almacenId?: number | null
+  /** Solo al crear: la cotización del portal que se jaló. Queda atendida con este pedido. */
+  cotizacionId?: number | null
   detalle: LineaVentaRequest[]
 }
 

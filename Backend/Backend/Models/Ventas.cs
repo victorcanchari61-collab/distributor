@@ -79,6 +79,13 @@ public class Pedido
     public int? UsuarioId { get; set; }
     public Usuario? Usuario { get; set; }
 
+    /// <summary>
+    /// La cotización del portal de la que salió, si el vendedor la jaló. Única: de una cotización sale un solo pedido,
+    /// aunque dos personas la jalen a la vez.
+    /// </summary>
+    public int? CotizacionId { get; set; }
+    public Cotizacion? Cotizacion { get; set; }
+
     public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
     public List<PedidoDetalle> Detalle { get; set; } = [];

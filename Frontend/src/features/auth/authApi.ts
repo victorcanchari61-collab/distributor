@@ -29,17 +29,3 @@ export interface LoginRequest {
 export function login(request: LoginRequest) {
   return api.post<LoginResponse>('/auth/login', request, { auth: false })
 }
-
-export interface CreateUsuarioRequest {
-  nombre: string
-  email: string
-  password: string
-  dni?: string | null
-  /** Id de la tabla Roles. */
-  rolId: number
-}
-
-/** POST /api/auth/register */
-export function register(request: CreateUsuarioRequest) {
-  return api.post<UsuarioResponse>('/auth/register', request)
-}

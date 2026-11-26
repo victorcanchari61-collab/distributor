@@ -13,10 +13,12 @@ namespace Backend.Controllers;
 public class ClienteController : ControllerBase
 {
     private readonly IClienteService _clienteService;
+    private readonly IPortalAccesoService _portal;
 
-    public ClienteController(IClienteService clienteService)
+    public ClienteController(IClienteService clienteService, IPortalAccesoService portal)
     {
         _clienteService = clienteService;
+        _portal = portal;
     }
 
     /// <summary>
@@ -122,4 +124,21 @@ public class ClienteController : ControllerBase
         await _clienteService.DeleteAsync(id);
         return NoContent();
     }
+
+    // ------------------------------------------------- Acceso al portal
+
+    /// <summary>Si el cliente puede entrar al portal de cotizaciones, y desde cuándo.</summary>
+    [HttpGet("{id:int}/portal")]
+    [Permiso("maestros.clientes", Accion.Ver)]
+    public async Task<IActionResult> EstadoPortal(int id) => Ok(await _portal.EstadoAsync(id));
+
+    /// <summary>Le manda (o le vuelve a mandar) el enlace para crear su usuario y contraseña.</summary>
+    [HttpPost("{id:int}/portal/invitar")]
+    [Permiso("maestros.clientes", Accion.Editar)]
+    public async Task<IActionResult> InvitarPortal(int id) => Ok(await _portal.InvitarAsync(id));
+
+    [HttpPatch("{id:int}/portal/activo")]
+    [Permiso("maestros.clientes", Accion.Editar)]
+    public async Task<IActionResult> AccesoPortalActivo(int id, [FromBody] AccesoPortalActivoRequest request) =>
+        Ok(await _portal.CambiarActivoAsync(id, request.Activo));
 }

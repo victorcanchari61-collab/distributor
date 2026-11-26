@@ -49,8 +49,12 @@ public class VentasRepository : IVentasRepository
         return pedido;
     }
 
+    public Task<Cotizacion?> GetCotizacionAsync(int id) =>
+        _context.Cotizaciones.FirstOrDefaultAsync(c => c.Id == id);
+
     private IQueryable<Pedido> PedidosConDetalle() =>
         _context.Pedidos
+            .Include(p => p.Cotizacion)
             .Include(p => p.Cliente).ThenInclude(c => c!.Ruta)
             .Include(p => p.ListaPrecio)
             .Include(p => p.Almacen)

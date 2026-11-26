@@ -257,6 +257,14 @@ const menuGrupos = <MenuGrupo>[
         titulo: 'Pedidos',
         icono: Icons.list_alt_outlined,
       ),
+      // Lo que mandan los clientes desde el portal web: se atienden jalandolas
+      // al crear el pedido.
+      MenuItem(
+        id: 'fact.cotizaciones',
+        pendiente: false,
+        titulo: 'Cotizaciones',
+        icono: Icons.request_quote_outlined,
+      ),
       MenuItem(
         id: 'fact.notaventa',
         pendiente: false,

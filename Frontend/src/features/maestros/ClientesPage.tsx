@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { navPath } from '../../components/layout'
 import { fechaCorta } from '../../lib/fechas'
 import { Award, Contact, MapPin, Plus, Route, ShieldOff, Upload } from 'lucide-react'
-import { FaBan, FaCircleCheck, FaPencil, FaTrash } from 'react-icons/fa6'
+import { FaBan, FaCircleCheck, FaKey, FaPencil, FaTrash } from 'react-icons/fa6'
 import {
   Alert,
   Badge,
@@ -37,6 +37,7 @@ import { categorizacionApi } from '../crm/categorizacionApi'
 import type { CategoriaCliente } from '../crm/categorizacionApi'
 import { ModalCategorizacion } from '../crm/ModalCategorizacion'
 import { clienteApi } from './clienteApi'
+import { AccesoPortalModal } from './AccesoPortalModal'
 import type { ClienteRequest, ClienteResponse, ResumenClientes } from './clienteApi'
 
 import { opcional } from '../../lib/apoyo'
@@ -74,6 +75,8 @@ export function ClientesPage() {
   const [abierto, setAbierto] = useState(false)
   const [importando, setImportando] = useState(false)
   const [editando, setEditando] = useState<ClienteResponse | null>(null)
+  /** El cliente cuyo acceso al portal de cotizaciones se está viendo. */
+  const [portalDe, setPortalDe] = useState<ClienteResponse | null>(null)
   const [form, setForm] = useState<ClienteRequest>(VACIO)
   // Solo para encadenar los selects del formulario: lo unico que se manda es
   // form.distritoId, pero para mostrar provincias/distritos hay que saber que
@@ -616,12 +619,20 @@ export function ClientesPage() {
               sinPermiso={!puede('maestros.clientes', 'editar')}>
               {row.activo ? <FaBan size={15} /> : <FaCircleCheck size={15} />}
             </RowAction>
+            <RowAction label={`Acceso al portal de ${row.nombre}`} tone="documento" onClick={() => setPortalDe(row)}>
+              <FaKey size={14} />
+            </RowAction>
             <RowAction label={`Eliminar ${row.nombre}`} tone="danger" onClick={() => eliminar(row)} sinPermiso={!puede('maestros.clientes', 'eliminar')}>
               <FaTrash size={15} />
             </RowAction>
           </>
         )}
       >
+        <AccesoPortalModal
+          cliente={portalDe}
+          onClose={() => setPortalDe(null)}
+          puedeEditar={puede('maestros.clientes', 'editar')}
+        />
         <Modal
           open={abierto}
           title={editando ? `Editar ${editando.nombre}` : 'Nuevo cliente'}

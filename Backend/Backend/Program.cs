@@ -130,6 +130,11 @@ builder.Services.AddScoped<IPlanoService, PlanoService>();
 builder.Services.AddScoped<ISolicitudCompraService, SolicitudCompraService>();
 builder.Services.AddScoped<IComprasService, ComprasService>();
 builder.Services.AddScoped<IVentasService, VentasService>();
+// Portal de clientes: sus cuentas y las cotizaciones que mandan.
+builder.Services.AddScoped<ICotizacionRepository, CotizacionRepository>();
+builder.Services.AddScoped<IPortalAccesoService, PortalAccesoService>();
+builder.Services.AddScoped<ICotizacionService, CotizacionService>();
+builder.Services.AddScoped<IPasswordHasher<Backend.Models.AccesoCliente>, PasswordHasher<Backend.Models.AccesoCliente>>();
 builder.Services.AddScoped<IPdfService, PdfService>();
 builder.Services.AddScoped<IUsuarioActual, UsuarioActual>();
 builder.Services.AddScoped<IDespachoService, DespachoService>();
@@ -220,6 +225,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 return Task.CompletedTask;
             }
         };
+    })
+    // La sesión del portal de clientes: misma firma, OTRA audiencia. Solo la aceptan los endpoints del portal
+    // ([Authorize(AuthenticationSchemes = "Portal")]); el esquema de arriba la rechaza en todo lo demás.
+    .AddJwtBearer(PortalJwt.Esquema, options =>
+    {
+        options.TokenValidationParameters = PortalJwt.Validacion(builder.Configuration);
+        // Los nombres de claim tal cual ("portal_acceso"), sin traducirlos a los de .NET.
+        options.MapInboundClaims = false;
     });
 
 var app = builder.Build();

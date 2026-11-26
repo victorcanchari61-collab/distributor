@@ -48,7 +48,16 @@ public class CatalogoClienteService : ICatalogoClienteService
                 UnidadBase = p.UnidadBase,
                 Contenido = p.Contenido,
                 PrecioDesde = p.PrecioDesde,
-                Presentaciones = p.Presentaciones,
+                // Sin el id: el enlace público no expone ids internos.
+                Presentaciones = p.Presentaciones.Select(pr => new CatalogoPresentacionResponse
+                {
+                    Nombre = pr.Nombre,
+                    Unidad = pr.Unidad,
+                    Factor = pr.Factor,
+                    Precio = pr.Precio,
+                    PrecioUnidadBase = pr.PrecioUnidadBase,
+                    Escalones = pr.Escalones,
+                }).ToList(),
             }).ToList(),
         };
     }
@@ -124,6 +133,7 @@ public class CatalogoClienteService : ICatalogoClienteService
 
             presentaciones.Add(new CatalogoPresentacionResponse
             {
+                Id = presentacion.Id,
                 Nombre = presentacion.Nombre,
                 Unidad = presentacion.Unidad?.Nombre ?? string.Empty,
                 Factor = presentacion.Factor,

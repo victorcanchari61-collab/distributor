@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import {
+  MessageSquareQuote,
   ArrowLeftRight,
   FileBarChart,
   Banknote,
@@ -178,6 +179,8 @@ export const NAV_GROUPS: NavGroup[] = [
     // y cada tipo se consulta en su propia vista. Las series se configuran en Configuracion > Empresas.
     items: [
       { id: 'fact.pedidos', label: 'Pedidos', icon: ClipboardList },
+      // Lo que mandan los clientes desde el portal: se atienden jalándolas al crear el pedido.
+      { id: 'fact.cotizaciones', label: 'Cotizaciones', icon: MessageSquareQuote },
       { id: 'fact.notaventa', label: 'Notas de venta', icon: FileText },
       { id: 'fact.precios', label: 'Listas de precios', icon: Banknote },
       { id: 'fact.facturas', label: 'Facturas', icon: Receipt },

@@ -72,6 +72,10 @@ public class AppDbContext : DbContext
     public DbSet<MovimientoSaldoProveedor> MovimientosSaldoProveedor => Set<MovimientoSaldoProveedor>();
     public DbSet<MetodoPago> MetodosPago => Set<MetodoPago>();
     public DbSet<Pedido> Pedidos => Set<Pedido>();
+    public DbSet<AccesoCliente> AccesosCliente => Set<AccesoCliente>();
+    public DbSet<Cotizacion> Cotizaciones => Set<Cotizacion>();
+    public DbSet<CotizacionDetalle> CotizacionDetalles => Set<CotizacionDetalle>();
+    public DbSet<ClienteFavorito> ClienteFavoritos => Set<ClienteFavorito>();
     public DbSet<PedidoDetalle> PedidoDetalles => Set<PedidoDetalle>();
     public DbSet<NotaVenta> NotasVenta => Set<NotaVenta>();
     public DbSet<NotaVentaDetalle> NotaVentaDetalles => Set<NotaVentaDetalle>();
@@ -1410,6 +1414,77 @@ public class AppDbContext : DbContext
                 .HasForeignKey(p => p.AlmacenId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(p => p.Usuario).WithMany()
                 .HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.SetNull);
+
+            // Único: de una cotización sale un solo pedido. Si dos personas la jalan a la vez, la segunda choca aquí.
+            // MySQL admite varios NULL en un índice único, así que los pedidos sin cotización no se estorban.
+            entity.HasIndex(p => p.CotizacionId).IsUnique();
+            entity.HasOne(p => p.Cotizacion).WithMany()
+                .HasForeignKey(p => p.CotizacionId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // --- Portal de clientes ---
+        modelBuilder.Entity<AccesoCliente>(entity =>
+        {
+            entity.ToTable("AccesosCliente");
+            entity.HasIndex(a => a.ClienteId).IsUnique();
+            entity.HasIndex(a => a.Usuario).IsUnique();
+            entity.HasIndex(a => a.TokenHash);
+            entity.Property(a => a.Usuario).HasMaxLength(40);
+            entity.Property(a => a.PasswordHash).HasMaxLength(200);
+            entity.Property(a => a.TokenHash).HasMaxLength(64);
+            entity.Property(a => a.TokenTipo).HasMaxLength(15);
+
+            // Borrar al cliente se lleva su acceso: sin cliente no hay a nombre de quién entrar.
+            entity.HasOne(a => a.Cliente).WithMany()
+                .HasForeignKey(a => a.ClienteId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(a => a.InvitadoPor).WithMany()
+                .HasForeignKey(a => a.InvitadoPorId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ClienteFavorito>(entity =>
+        {
+            entity.ToTable("ClienteFavoritos");
+            entity.HasIndex(f => new { f.ClienteId, f.ProductoId }).IsUnique();
+            // Son marcas del cliente, no historial: se van con él o con el producto.
+            entity.HasOne(f => f.Cliente).WithMany()
+                .HasForeignKey(f => f.ClienteId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(f => f.Producto).WithMany()
+                .HasForeignKey(f => f.ProductoId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Cotizacion>(entity =>
+        {
+            entity.ToTable("Cotizaciones");
+            entity.HasIndex(c => c.Numero).IsUnique();
+            entity.HasIndex(c => new { c.Estado, c.Fecha });
+            entity.Property(c => c.Numero).HasMaxLength(20).IsRequired();
+            entity.Property(c => c.Estado).HasMaxLength(15).IsRequired();
+            entity.Property(c => c.Nota).HasMaxLength(300);
+            entity.Property(c => c.MotivoDescarte).HasMaxLength(250);
+            entity.Property(c => c.Total).HasPrecision(18, 2);
+
+            entity.HasOne(c => c.Cliente).WithMany()
+                .HasForeignKey(c => c.ClienteId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Vendedor).WithMany()
+                .HasForeignKey(c => c.VendedorId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(c => c.ListaPrecio).WithMany()
+                .HasForeignKey(c => c.ListaPrecioId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(c => c.CerradaPor).WithMany()
+                .HasForeignKey(c => c.CerradaPorId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(c => c.Detalle).WithOne(d => d.Cotizacion)
+                .HasForeignKey(d => d.CotizacionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CotizacionDetalle>(entity =>
+        {
+            entity.ToTable("CotizacionDetalle");
+            entity.Property(d => d.Cantidad).HasPrecision(18, 4);
+            entity.Property(d => d.PrecioPresentacion).HasPrecision(18, 4);
+            entity.Property(d => d.Subtotal).HasPrecision(18, 2);
+            entity.HasOne(d => d.Producto).WithMany()
+                .HasForeignKey(d => d.ProductoId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(d => d.Presentacion).WithMany()
+                .HasForeignKey(d => d.PresentacionId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<PedidoDetalle>(entity =>
