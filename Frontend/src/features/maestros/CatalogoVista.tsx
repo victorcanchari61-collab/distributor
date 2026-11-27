@@ -26,7 +26,7 @@ const iniciales = (nombre: string) =>
  * El nombre como se lee en pantalla. Algunas presentaciones se cargaron solo con el número ("12"): sueltas no dicen
  * nada, así que se completan con la unidad ("Caja x 12").
  */
-const nombrePresentacion = (pr: CatalogoPresentacion) =>
+export const nombrePresentacion = (pr: CatalogoPresentacion) =>
   /\p{L}/u.test(pr.nombre) ? pr.nombre : `${pr.unidad} x ${pr.nombre}`.trim()
 
 /**
@@ -222,7 +222,7 @@ function Chip({ activo, onClick, children }: { activo: boolean; onClick: () => v
 }
 
 /** La foto del producto, o un placeholder con sus iniciales si no tiene o no carga. */
-function Foto({ producto, className }: { producto: CatalogoProducto; className?: string }) {
+export function Foto({ producto, className }: { producto: CatalogoProducto; className?: string }) {
   const [falla, setFalla] = useState(false)
 
   if (producto.foto && !falla) {
@@ -298,12 +298,14 @@ function Tarjeta({
   const extra = producto.presentaciones.length - 2
 
   return (
-    <div className="relative">
+    // La tarjeta llena su celda de la grilla (ancho y alto): un <button> no se estira solo dentro de un div, y sin
+    // esto cada tarjeta quedaba del ancho de su contenido.
+    <div className="relative h-full">
       {favoritos && <Corazon producto={producto} favoritos={favoritos} className="absolute top-2 right-2 z-10" />}
       <button
         type="button"
         onClick={onAbrir}
-        className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-surface text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[rgb(var(--sys-rgb)/0.4)] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
+        className="group flex size-full flex-col overflow-hidden rounded-2xl border border-line bg-surface text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[rgb(var(--sys-rgb)/0.4)] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-ring"
       >
         <div className="relative aspect-square overflow-hidden bg-surface-alt">
           <Foto producto={producto} className="transition duration-300 group-hover:scale-105" />
@@ -438,7 +440,7 @@ function Detalle({
  * Cuánto lleva de una presentación: "Agregar" si nada, y si ya lleva, − cantidad +. Se puede escribir la cantidad
  * (diez sacos no son diez toques); vaciarla o poner 0 la quita.
  */
-function Cantidad({ valor, onCambio, nombre }: { valor: number; onCambio: (n: number) => void; nombre: string }) {
+export function Cantidad({ valor, onCambio, nombre }: { valor: number; onCambio: (n: number) => void; nombre: string }) {
   if (valor <= 0) {
     return (
       <button

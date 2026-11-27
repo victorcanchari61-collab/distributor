@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Phone } from 'lucide-react'
+import { LogIn, Phone } from 'lucide-react'
 import { Logo } from '../../components/ui'
 import { CatalogoVista } from './CatalogoVista'
 import { useCatalogo } from './useCatalogo'
@@ -32,15 +32,25 @@ export function CatalogoPublicoPage() {
             </div>
           </div>
 
-          {datos?.telefono && (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quien ya tiene acceso al portal arma ahí su cotización (con sus precios y su carrito). */}
             <a
-              href={`tel:${datos.telefono.replace(/[^\d+]/g, '')}`}
-              className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium ring-1 ring-white/20 transition hover:bg-white/20"
+              href="/portal"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-navy shadow-sm transition hover:bg-white/90"
             >
-              <Phone className="size-4" />
-              {datos.telefono}
+              <LogIn className="size-4" />
+              Entrar para cotizar
             </a>
-          )}
+            {datos?.telefono && (
+              <a
+                href={`tel:${datos.telefono.replace(/[^\d+]/g, '')}`}
+                className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium ring-1 ring-white/20 transition hover:bg-white/20"
+              >
+                <Phone className="size-4" />
+                {datos.telefono}
+              </a>
+            )}
+          </div>
         </div>
       </header>
 

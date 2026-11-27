@@ -58,6 +58,16 @@ public class PortalController : ControllerBase
     [HttpGet("yo")]
     public async Task<IActionResult> Yo() => Ok(await _accesos.YoAsync());
 
+    /// <summary>Mi perfil: otro usuario (con la contraseña actual).</summary>
+    [HttpPut("perfil/usuario")]
+    public async Task<IActionResult> CambiarUsuario([FromBody] PortalCambiarUsuarioRequest request) =>
+        Ok(await _accesos.CambiarUsuarioAsync(request));
+
+    /// <summary>Mi perfil: otra contraseña (con la actual). Devuelve la sesión nueva de este celular.</summary>
+    [HttpPut("perfil/password")]
+    public async Task<IActionResult> CambiarPassword([FromBody] PortalCambiarPasswordRequest request) =>
+        Ok(await _accesos.CambiarPasswordAsync(request));
+
     [HttpGet("catalogo")]
     public async Task<IActionResult> Catalogo() => Ok(await _cotizaciones.CatalogoAsync());
 

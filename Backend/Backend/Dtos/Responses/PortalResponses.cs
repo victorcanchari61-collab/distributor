@@ -65,8 +65,18 @@ public class PortalClienteResponse
     public string Documento { get; set; } = string.Empty;
     public string Usuario { get; set; } = string.Empty;
     public string? Vendedor { get; set; }
+
+    /// <summary>El teléfono de su vendedor (el primero de la ruta que tenga), para llamarlo desde el perfil.</summary>
+    public string? TelefonoVendedor { get; set; }
+
     public string Empresa { get; set; } = string.Empty;
     public string? TelefonoEmpresa { get; set; }
+
+    /// <summary>Solo para mostrar en su perfil: los cambia el vendedor (el teléfono es por donde le llega la recuperación).</summary>
+    public string? Telefono { get; set; }
+    public string? Direccion { get; set; }
+
+    public DateTime? UltimoIngreso { get; set; }
 }
 
 public class CotizacionResponse

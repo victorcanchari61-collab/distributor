@@ -47,4 +47,13 @@ public interface IPortalAccesoService
     Task<AccesoCliente> AccesoActualAsync();
 
     Task<PortalClienteResponse> YoAsync();
+
+    /// <summary>Otro usuario para entrar; la sesión sigue abierta.</summary>
+    Task<PortalSesionResponse> CambiarUsuarioAsync(PortalCambiarUsuarioRequest request);
+
+    /// <summary>
+    /// Otra contraseña. Cierra las sesiones de los demás celulares (si alguien más la sabía, ya no entra) y devuelve
+    /// una sesión nueva para este, que no se corta.
+    /// </summary>
+    Task<PortalSesionResponse> CambiarPasswordAsync(PortalCambiarPasswordRequest request);
 }

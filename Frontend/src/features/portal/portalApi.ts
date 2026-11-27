@@ -15,8 +15,13 @@ export interface PortalCliente {
   documento: string
   usuario: string
   vendedor: string | null
+  telefonoVendedor?: string | null
   empresa: string
   telefonoEmpresa: string | null
+  /** Solo para mostrar en "Mi perfil": los cambia el vendedor. */
+  telefono?: string | null
+  direccion?: string | null
+  ultimoIngreso?: string | null
 }
 
 export interface PortalSesion {
@@ -104,6 +109,14 @@ export const portalApi = {
 
   yo: () => conSesion<PortalCliente>('/portal/yo'),
 
+  /** Mi perfil: otro usuario (pide la contraseña actual). Devuelve la sesión con el usuario nuevo. */
+  cambiarUsuario: (body: { usuario: string; passwordActual: string }) =>
+    conSesion<PortalSesion>('/portal/perfil/usuario', { method: 'PUT', body }),
+
+  /** Mi perfil: otra contraseña. Devuelve la sesión nueva de este celular (los otros tienen que volver a entrar). */
+  cambiarPassword: (body: { passwordActual: string; passwordNueva: string }) =>
+    conSesion<PortalSesion>('/portal/perfil/password', { method: 'PUT', body }),
+
   /** El catálogo con los precios de SU lista, con ids para el carrito. */
   catalogo: async (): Promise<CatalogoResponse> => {
     const r = await conSesion<{
@@ -141,3 +154,8 @@ export const portalApi = {
 
 /** Ruta pública del portal: la de los enlaces de WhatsApp. */
 export const RUTA_PORTAL = '/portal'
+
+/** Las páginas de la tienda: cada una con su dirección (/portal, /portal/favoritos...), así el "atrás" funciona. */
+export type SeccionPortal = 'catalogo' | 'favoritos' | 'cotizaciones' | 'perfil'
+
+export const SECCIONES_PORTAL: SeccionPortal[] = ['catalogo', 'favoritos', 'cotizaciones', 'perfil']

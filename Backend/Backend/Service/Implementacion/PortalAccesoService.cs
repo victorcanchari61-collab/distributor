@@ -275,6 +275,66 @@ public partial class PortalAccesoService : IPortalAccesoService
 
     public async Task<PortalClienteResponse> YoAsync() => await ClienteDeAsync(await AccesoActualAsync());
 
+    public async Task<PortalSesionResponse> CambiarUsuarioAsync(PortalCambiarUsuarioRequest request)
+    {
+        var acceso = await AccesoActualAsync();
+        ExigirPasswordActual(acceso, request.PasswordActual);
+
+        var usuario = LimpiarUsuario(request.Usuario);
+        ExigirUsuarioValido(usuario);
+        if (usuario != acceso.Usuario)
+        {
+            if (await _repository.UsuarioTomadoAsync(usuario, acceso.Id))
+            {
+                throw new ConflictException("Ese usuario ya lo usa otra persona. Prueba con otro.");
+            }
+            acceso.Usuario = usuario;
+            await _repository.SaveAsync();
+        }
+
+        return new PortalSesionResponse
+        {
+            Token = PortalJwt.Emitir(_configuration, acceso),
+            Cliente = await ClienteDeAsync(acceso),
+        };
+    }
+
+    public async Task<PortalSesionResponse> CambiarPasswordAsync(PortalCambiarPasswordRequest request)
+    {
+        var acceso = await AccesoActualAsync();
+        ExigirPasswordActual(acceso, request.PasswordActual);
+        ExigirPasswordValida(request.PasswordNueva);
+
+        acceso.PasswordHash = _hasher.HashPassword(acceso, request.PasswordNueva);
+        // Los demás celulares tienen que volver a entrar; este recibe su sesión nueva aquí mismo.
+        acceso.VersionSesion++;
+        // Un enlace de recuperación pendiente ya no hace falta.
+        if (acceso.TokenTipo == TipoTokenAcceso.Recuperacion)
+        {
+            acceso.TokenHash = null;
+            acceso.TokenTipo = null;
+            acceso.TokenExpira = null;
+        }
+        await _repository.SaveAsync();
+
+        return new PortalSesionResponse
+        {
+            Token = PortalJwt.Emitir(_configuration, acceso),
+            Cliente = await ClienteDeAsync(acceso),
+        };
+    }
+
+    /// <summary>Para tocar el usuario o la contraseña hay que saber la actual: un celular prestado no basta.</summary>
+    private void ExigirPasswordActual(AccesoCliente acceso, string? password)
+    {
+        if (string.IsNullOrEmpty(password) || acceso.PasswordHash is null
+            || _hasher.VerifyHashedPassword(acceso, acceso.PasswordHash, password) == PasswordVerificationResult.Failed)
+        {
+            // 400 y no 401: un 401 haría que el portal cierre la sesión por una contraseña mal escrita.
+            throw new BadRequestException("La contraseña actual no es correcta.");
+        }
+    }
+
     // ============================================================== Apoyo
 
     private async Task<PortalSesionResponse> IniciarSesionAsync(AccesoCliente acceso, bool usarToken)
@@ -307,8 +367,12 @@ public partial class PortalAccesoService : IPortalAccesoService
             Documento = cliente.Documento,
             Usuario = acceso.Usuario ?? string.Empty,
             Vendedor = vendedores.Count == 0 ? null : string.Join(", ", vendedores.Select(v => v.Nombre)),
+            TelefonoVendedor = vendedores.Select(v => v.Telefono?.Trim()).FirstOrDefault(t => !string.IsNullOrEmpty(t)),
             Empresa = NombreDe(empresa),
             TelefonoEmpresa = string.IsNullOrWhiteSpace(empresa?.Telefono) ? null : empresa!.Telefono!.Trim(),
+            Telefono = string.IsNullOrWhiteSpace(cliente.Telefono) ? null : cliente.Telefono.Trim(),
+            Direccion = string.IsNullOrWhiteSpace(cliente.Direccion) ? null : cliente.Direccion.Trim(),
+            UltimoIngreso = acceso.UltimoIngreso,
         };
     }
 

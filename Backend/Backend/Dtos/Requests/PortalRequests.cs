@@ -26,6 +26,20 @@ public class PortalRestablecerRequest
     public string Password { get; set; } = string.Empty;
 }
 
+/// <summary>Cambiar el usuario desde "Mi perfil": pide la contraseña actual.</summary>
+public class PortalCambiarUsuarioRequest
+{
+    public string Usuario { get; set; } = string.Empty;
+    public string PasswordActual { get; set; } = string.Empty;
+}
+
+/// <summary>Cambiar la contraseña desde "Mi perfil": pide la actual.</summary>
+public class PortalCambiarPasswordRequest
+{
+    public string PasswordActual { get; set; } = string.Empty;
+    public string PasswordNueva { get; set; } = string.Empty;
+}
+
 public class PortalOlvideRequest
 {
     /// <summary>Su usuario o su DNI/RUC.</summary>
