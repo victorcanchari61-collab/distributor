@@ -40,10 +40,13 @@ export interface CarritoCatalogo {
   fijar: (producto: CatalogoProducto, presentacion: CatalogoPresentacion, cantidad: number) => void
 }
 
-/** Los favoritos del cliente en el portal: un corazón por producto y el filtro "Mis favoritos". */
+/**
+ * Los favoritos del cliente en el portal: un corazón por PRESENTACIÓN (el que compra sacos no quiere las bolsas) y el
+ * filtro "Mis favoritos".
+ */
 export interface FavoritosCatalogo {
-  es: (productoId: number) => boolean
-  alternar: (producto: CatalogoProducto) => void
+  es: (presentacionId: number) => boolean
+  alternar: (producto: CatalogoProducto, presentacion: CatalogoPresentacion) => void
   /** Si arranca mostrando solo los favoritos (cuando ya tiene alguno). */
   soloAlInicio?: boolean
 }
@@ -72,13 +75,35 @@ export function CatalogoVista({ datos, cargando, error, carrito, favoritos }: Ca
   const productos = useMemo(() => {
     const texto = normalizar(busqueda.trim())
     return (datos?.productos ?? []).filter((p) => {
-      if (soloFavoritos && favoritos && !(p.id !== undefined && favoritos.es(p.id))) return false
+      // Un producto entra si alguna de sus presentaciones es favorita (cuáles, se ve abajo).
+      if (soloFavoritos && favoritos && !p.presentaciones.some((pr) => pr.id !== undefined && favoritos.es(pr.id)))
+        return false
       if (categoria && p.categoria !== categoria) return false
       if (marca && p.marca !== marca) return false
       if (!texto) return true
       return normalizar(`${p.nombre} ${p.marca ?? ''} ${p.categoria ?? ''}`).includes(texto)
     })
   }, [datos, busqueda, categoria, marca, soloFavoritos, favoritos])
+
+  /*
+   * Con carrito (el portal), cada presentación es su propia tarjeta con su botón de agregar: "Camanejo · Bolsa 3 kg"
+   * y "Camanejo · Saco 50 kg" se piden por separado, y abrir el producto para elegir era un paso de más. Sin carrito
+   * (el catálogo público) siguen agrupadas por producto.
+   */
+  const porPresentacion = useMemo(
+    () =>
+      carrito
+        ? productos.flatMap((p) =>
+            p.presentaciones
+              .filter((pr) => pr.id !== undefined)
+              // Con "Mis favoritos", solo las presentaciones marcadas, no todas las del producto.
+              .filter((pr) => !soloFavoritos || !favoritos || favoritos.es(pr.id!))
+              .map((pr) => ({ producto: p, presentacion: pr })),
+          )
+        : [],
+    [carrito, productos, soloFavoritos, favoritos],
+  )
+  const cuantos = carrito ? porPresentacion.length : productos.length
 
   const hayFiltros = busqueda !== '' || categoria !== null || marca !== '' || soloFavoritos
   const limpiar = () => {
@@ -152,8 +177,7 @@ export function CatalogoVista({ datos, cargando, error, carrito, favoritos }: Ca
       {!cargando && datos && (
         <p className="flex items-center gap-2 text-sm text-ink-muted">
           <span>
-            <strong className="font-semibold text-ink">{productos.length}</strong>{' '}
-            {productos.length === 1 ? 'producto' : 'productos'}
+            <strong className="font-semibold text-ink">{cuantos}</strong> {cuantos === 1 ? 'producto' : 'productos'}
           </span>
           {hayFiltros && (
             <button
@@ -177,17 +201,18 @@ export function CatalogoVista({ datos, cargando, error, carrito, favoritos }: Ca
         )
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 2xl:grid-cols-5">
-          {productos.map((p) => (
-            <Tarjeta
-              key={p.clave}
-              producto={p}
-              onAbrir={() => setAbierto(p)}
-              enCarrito={
-                carrito ? p.presentaciones.reduce((n, pr) => n + (pr.id ? carrito.cantidadDe(pr.id) : 0), 0) : 0
-              }
-              favoritos={favoritos}
-            />
-          ))}
+          {carrito
+            ? porPresentacion.map(({ producto, presentacion }) => (
+                <TarjetaPresentacion
+                  key={`${producto.clave}-${presentacion.id}`}
+                  producto={producto}
+                  presentacion={presentacion}
+                  onAbrir={() => setAbierto(producto)}
+                  carrito={carrito}
+                  favoritos={favoritos}
+                />
+              ))
+            : productos.map((p) => <Tarjeta key={p.clave} producto={p} onAbrir={() => setAbierto(p)} enCarrito={0} />)}
         </div>
       )}
 
@@ -255,24 +280,30 @@ export function Foto({ producto, className }: { producto: CatalogoProducto; clas
   )
 }
 
-/** El corazón de un producto: marcado o no. Va fuera del botón de la tarjeta (un botón no puede ir dentro de otro). */
+/**
+ * El corazón de una presentación: marcado o no. Va fuera del botón de la tarjeta (un botón no puede ir dentro de
+ * otro).
+ */
 function Corazon({
   producto,
+  presentacion,
   favoritos,
   className,
 }: {
   producto: CatalogoProducto
+  presentacion: CatalogoPresentacion
   favoritos: FavoritosCatalogo
   className?: string
 }) {
-  if (producto.id === undefined) return null
-  const marcado = favoritos.es(producto.id)
+  if (presentacion.id === undefined) return null
+  const marcado = favoritos.es(presentacion.id)
+  const nombre = `${producto.nombre} (${nombrePresentacion(presentacion)})`
   return (
     <button
       type="button"
-      onClick={() => favoritos.alternar(producto)}
+      onClick={() => favoritos.alternar(producto, presentacion)}
       aria-pressed={marcado}
-      aria-label={marcado ? `Quitar ${producto.nombre} de mis favoritos` : `Agregar ${producto.nombre} a mis favoritos`}
+      aria-label={marcado ? `Quitar ${nombre} de mis favoritos` : `Agregar ${nombre} a mis favoritos`}
       title={marcado ? 'Quitar de mis favoritos' : 'Agregar a mis favoritos'}
       className={cn(
         'inline-flex size-9 items-center justify-center rounded-full bg-white/95 shadow-sm ring-1 ring-black/5 backdrop-blur transition hover:scale-105',
@@ -288,12 +319,10 @@ function Tarjeta({
   producto,
   onAbrir,
   enCarrito,
-  favoritos,
 }: {
   producto: CatalogoProducto
   onAbrir: () => void
   enCarrito: number
-  favoritos?: FavoritosCatalogo
 }) {
   const extra = producto.presentaciones.length - 2
 
@@ -301,7 +330,6 @@ function Tarjeta({
     // La tarjeta llena su celda de la grilla (ancho y alto): un <button> no se estira solo dentro de un div, y sin
     // esto cada tarjeta quedaba del ancho de su contenido.
     <div className="relative h-full">
-      {favoritos && <Corazon producto={producto} favoritos={favoritos} className="absolute top-2 right-2 z-10" />}
       <button
         type="button"
         onClick={onAbrir}
@@ -360,6 +388,72 @@ function Tarjeta({
   )
 }
 
+/**
+ * Una presentación del portal: "Camanejo · Saco 50 kg" con su precio y, abajo, Agregar (o − cantidad + si ya la
+ * lleva). Tocar la foto o el nombre abre el detalle del producto con todas sus presentaciones.
+ */
+function TarjetaPresentacion({
+  producto,
+  presentacion,
+  onAbrir,
+  carrito,
+  favoritos,
+}: {
+  producto: CatalogoProducto
+  presentacion: CatalogoPresentacion
+  onAbrir: () => void
+  carrito: CarritoCatalogo
+  favoritos?: FavoritosCatalogo
+}) {
+  const nombre = nombrePresentacion(presentacion)
+  const lleva = carrito.cantidadDe(presentacion.id!)
+  const escalon = presentacion.escalones[0]
+
+  return (
+    <div
+      className={cn(
+        'relative flex h-full flex-col overflow-hidden rounded-2xl border bg-surface shadow-sm transition hover:shadow-lg',
+        lleva > 0 ? 'border-[rgb(var(--sys-rgb)/0.55)] ring-1 ring-[rgb(var(--sys-rgb)/0.25)]' : 'border-line',
+      )}
+    >
+      {favoritos && (
+        <Corazon
+          producto={producto}
+          presentacion={presentacion}
+          favoritos={favoritos}
+          className="absolute top-2 right-2 z-10"
+        />
+      )}
+      <button type="button" onClick={onAbrir} className="group flex flex-1 flex-col text-left">
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-alt">
+          <Foto producto={producto} className="transition duration-300 group-hover:scale-105" />
+          <span className="absolute bottom-2 left-2 max-w-[85%] truncate rounded-full bg-[rgb(var(--sys-rgb))] px-2.5 py-1 text-xs font-semibold text-white shadow">
+            {nombre}
+          </span>
+        </div>
+        <div className="flex flex-1 flex-col gap-1 p-3 pb-2">
+          <h3 className="line-clamp-2 min-h-[2.5rem] text-sm leading-snug font-semibold text-ink">{producto.nombre}</h3>
+          <p className="h-4 truncate text-xs text-ink-muted">{producto.marca ?? ''}</p>
+          <p className="mt-1 text-lg font-bold text-ink">{soles(presentacion.precio)}</p>
+          <p className="text-[11px] text-ink-soft">
+            {presentacion.factor !== 1
+              ? `${soles(presentacion.precioUnidadBase)} por ${producto.unidadBase.toLowerCase() || 'unidad'}`
+              : presentacion.unidad}
+          </p>
+          {escalon && (
+            <p className="text-[11px] font-medium text-emerald-700">
+              Desde {cantidad(escalon.cantidadMinima)}: {soles(escalon.precio)}
+            </p>
+          )}
+        </div>
+      </button>
+      <div className="flex justify-center px-3 pb-3">
+        <Cantidad valor={lleva} onCambio={(n) => carrito.fijar(producto, presentacion, n)} nombre={nombre} />
+      </div>
+    </div>
+  )
+}
+
 function Detalle({
   producto,
   carrito,
@@ -373,7 +467,6 @@ function Detalle({
     <div className="grid gap-5 sm:grid-cols-[14rem_1fr]">
       <div className="relative mx-auto aspect-square w-full max-w-[16rem] overflow-hidden rounded-2xl border border-line bg-surface-alt sm:mx-0">
         <Foto producto={producto} />
-        {favoritos && <Corazon producto={producto} favoritos={favoritos} className="absolute top-2 right-2" />}
       </div>
 
       <div className="min-w-0 space-y-4">
@@ -418,7 +511,11 @@ function Detalle({
                   )}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-2">
-                  <p className="text-lg font-bold text-ink">{soles(pr.precio)}</p>
+                  <div className="flex items-center gap-2">
+                    {/* Cada presentación con su corazón: se marca la que se compra, no el producto entero. */}
+                    {favoritos && <Corazon producto={producto} presentacion={pr} favoritos={favoritos} />}
+                    <p className="text-lg font-bold text-ink">{soles(pr.precio)}</p>
+                  </div>
                   {carrito && pr.id !== undefined && (
                     <Cantidad
                       valor={carrito.cantidadDe(pr.id)}
@@ -440,7 +537,15 @@ function Detalle({
  * Cuánto lleva de una presentación: "Agregar" si nada, y si ya lleva, − cantidad +. Se puede escribir la cantidad
  * (diez sacos no son diez toques); vaciarla o poner 0 la quita.
  */
-export function Cantidad({ valor, onCambio, nombre }: { valor: number; onCambio: (n: number) => void; nombre: string }) {
+export function Cantidad({
+  valor,
+  onCambio,
+  nombre,
+}: {
+  valor: number
+  onCambio: (n: number) => void
+  nombre: string
+}) {
   if (valor <= 0) {
     return (
       <button

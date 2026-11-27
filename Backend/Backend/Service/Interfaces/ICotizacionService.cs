@@ -16,11 +16,11 @@ public interface ICotizacionService
 
     Task<List<CotizacionResponse>> MisCotizacionesAsync();
 
-    /// <summary>Los productos que marcó con el corazón (ids), del primero al último que marcó.</summary>
+    /// <summary>Las presentaciones que marcó con el corazón (ids), de la primera a la última que marcó.</summary>
     Task<List<int>> FavoritosAsync();
 
-    /// <summary>Marca o desmarca un producto del catálogo; devuelve cómo quedaron sus favoritos.</summary>
-    Task<List<int>> MarcarFavoritoAsync(int productoId, bool favorito);
+    /// <summary>Marca o desmarca una presentación del catálogo; devuelve cómo quedaron sus favoritos.</summary>
+    Task<List<int>> MarcarFavoritoAsync(int presentacionId, bool favorito);
 
     /// <summary>Los precios los pone el servidor con la lista del cliente: lo que manda el navegador no se cree.</summary>
     Task<CotizacionResponse> CrearAsync(CrearCotizacionRequest request);

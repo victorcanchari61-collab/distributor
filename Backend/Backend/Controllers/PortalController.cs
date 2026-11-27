@@ -74,17 +74,17 @@ public class PortalController : ControllerBase
     [HttpGet("cotizaciones")]
     public async Task<IActionResult> MisCotizaciones() => Ok(await _cotizaciones.MisCotizacionesAsync());
 
-    /// <summary>Los productos marcados con el corazón (ids).</summary>
+    /// <summary>Las presentaciones marcadas con el corazón (ids).</summary>
     [HttpGet("favoritos")]
     public async Task<IActionResult> Favoritos() => Ok(await _cotizaciones.FavoritosAsync());
 
-    [HttpPut("favoritos/{productoId:int}")]
-    public async Task<IActionResult> MarcarFavorito(int productoId) =>
-        Ok(await _cotizaciones.MarcarFavoritoAsync(productoId, true));
+    [HttpPut("favoritos/{presentacionId:int}")]
+    public async Task<IActionResult> MarcarFavorito(int presentacionId) =>
+        Ok(await _cotizaciones.MarcarFavoritoAsync(presentacionId, true));
 
-    [HttpDelete("favoritos/{productoId:int}")]
-    public async Task<IActionResult> QuitarFavorito(int productoId) =>
-        Ok(await _cotizaciones.MarcarFavoritoAsync(productoId, false));
+    [HttpDelete("favoritos/{presentacionId:int}")]
+    public async Task<IActionResult> QuitarFavorito(int presentacionId) =>
+        Ok(await _cotizaciones.MarcarFavoritoAsync(presentacionId, false));
 
     [HttpPost("cotizaciones")]
     public async Task<IActionResult> Crear([FromBody] CrearCotizacionRequest request) =>

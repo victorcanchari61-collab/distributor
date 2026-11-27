@@ -748,14 +748,19 @@ namespace Backend.Data.Migrations
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("PresentacionId")
+                        .HasColumnType("int");
+
                     b.Property<int>("ProductoId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("PresentacionId");
+
                     b.HasIndex("ProductoId");
 
-                    b.HasIndex("ClienteId", "ProductoId")
+                    b.HasIndex("ClienteId", "PresentacionId")
                         .IsUnique();
 
                     b.ToTable("ClienteFavoritos", (string)null);
@@ -5876,6 +5881,12 @@ namespace Backend.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Backend.Models.ProductoPresentacion", "Presentacion")
+                        .WithMany()
+                        .HasForeignKey("PresentacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Backend.Models.Producto", "Producto")
                         .WithMany()
                         .HasForeignKey("ProductoId")
@@ -5883,6 +5894,8 @@ namespace Backend.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Cliente");
+
+                    b.Navigation("Presentacion");
 
                     b.Navigation("Producto");
                 });

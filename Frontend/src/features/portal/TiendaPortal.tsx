@@ -171,9 +171,9 @@ export function TiendaPortal({
   const favoritosCatalogo: FavoritosCatalogo = useMemo(
     () => ({
       es: (id) => favoritos.includes(id),
-      alternar: (producto) => {
-        if (producto.id === undefined) return
-        const id = producto.id
+      alternar: (_producto, presentacion) => {
+        if (presentacion.id === undefined) return
+        const id = presentacion.id
         const marcar = !favoritos.includes(id)
         const antes = favoritos
         setFavoritos(marcar ? [...favoritos, id] : favoritos.filter((f) => f !== id))
@@ -513,10 +513,17 @@ function PaginaFavoritos({
   favoritosCatalogo: FavoritosCatalogo
   onVerCatalogo: () => void
 }) {
-  // En el orden en que los marcó.
-  const productos = favoritos
-    .map((id) => catalogo?.productos.find((p) => p.id === id))
-    .filter((p): p is CatalogoProducto => p !== undefined)
+  // Las presentaciones marcadas, agrupadas bajo su producto, en el orden en que las marcó (el producto va donde está
+  // la primera que marcó de él). Una que dejó de venderse ya no está en el catálogo y no se muestra.
+  const productos: { producto: CatalogoProducto; presentaciones: CatalogoPresentacion[] }[] = []
+  for (const id of favoritos) {
+    const producto = catalogo?.productos.find((p) => p.presentaciones.some((pr) => pr.id === id))
+    const presentacion = producto?.presentaciones.find((pr) => pr.id === id)
+    if (!producto || !presentacion) continue
+    const grupo = productos.find((g) => g.producto.clave === producto.clave)
+    if (grupo) grupo.presentaciones.push(presentacion)
+    else productos.push({ producto, presentaciones: [presentacion] })
+  }
 
   return (
     <div className="space-y-4">
@@ -543,7 +550,7 @@ function PaginaFavoritos({
         </div>
       ) : (
         <ul className="space-y-3">
-          {productos.map((p) => (
+          {productos.map(({ producto: p, presentaciones }) => (
             <li key={p.clave} className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
               <div className="flex items-center gap-3 p-3">
                 <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-surface-alt">
@@ -555,21 +562,20 @@ function PaginaFavoritos({
                     {[p.marca, p.categoria].filter(Boolean).join(' · ')}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => favoritosCatalogo.alternar(p)}
-                  aria-label={`Quitar ${p.nombre} de mis favoritos`}
-                  title="Quitar de mis favoritos"
-                  className="inline-flex size-9 shrink-0 items-center justify-center rounded-full hover:bg-rose-50"
-                >
-                  <Heart className="size-5 fill-rose-500 text-rose-500" />
-                </button>
               </div>
               <ul className="divide-y divide-line border-t border-line">
-                {p.presentaciones
-                  .filter((pr) => pr.id !== undefined)
-                  .map((pr) => (
-                    <li key={pr.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2.5">
+                {presentaciones.map((pr) => (
+                  <li key={pr.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2.5">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => favoritosCatalogo.alternar(p, pr)}
+                        aria-label={`Quitar ${p.nombre} (${nombrePresentacion(pr)}) de mis favoritos`}
+                        title="Quitar de mis favoritos"
+                        className="inline-flex size-8 shrink-0 items-center justify-center rounded-full hover:bg-rose-50"
+                      >
+                        <Heart className="size-[18px] fill-rose-500 text-rose-500" />
+                      </button>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-ink">{nombrePresentacion(pr)}</p>
                         <p className="text-xs text-ink-muted">
@@ -581,13 +587,14 @@ function PaginaFavoritos({
                           )}
                         </p>
                       </div>
-                      <Cantidad
-                        valor={carrito.cantidadDe(pr.id!)}
-                        onCambio={(n) => carrito.fijar(p, pr, n)}
-                        nombre={nombrePresentacion(pr)}
-                      />
-                    </li>
-                  ))}
+                    </div>
+                    <Cantidad
+                      valor={carrito.cantidadDe(pr.id!)}
+                      onCambio={(n) => carrito.fijar(p, pr, n)}
+                      nombre={nombrePresentacion(pr)}
+                    />
+                  </li>
+                ))}
               </ul>
             </li>
           ))}

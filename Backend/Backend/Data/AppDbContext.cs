@@ -1444,12 +1444,15 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ClienteFavorito>(entity =>
         {
             entity.ToTable("ClienteFavoritos");
-            entity.HasIndex(f => new { f.ClienteId, f.ProductoId }).IsUnique();
-            // Son marcas del cliente, no historial: se van con él o con el producto.
+            // Por presentación: marcar el saco no marca la bolsa.
+            entity.HasIndex(f => new { f.ClienteId, f.PresentacionId }).IsUnique();
+            // Son marcas del cliente, no historial: se van con él, con el producto o con la presentación.
             entity.HasOne(f => f.Cliente).WithMany()
                 .HasForeignKey(f => f.ClienteId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(f => f.Producto).WithMany()
                 .HasForeignKey(f => f.ProductoId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(f => f.Presentacion).WithMany()
+                .HasForeignKey(f => f.PresentacionId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Cotizacion>(entity =>

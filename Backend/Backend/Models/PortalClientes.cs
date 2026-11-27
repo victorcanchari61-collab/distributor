@@ -63,9 +63,9 @@ public class AccesoCliente
 }
 
 /// <summary>
-/// Un producto que el cliente marcó en el portal con el corazón: lo que pide siempre. El catálogo del portal tiene el
-/// filtro "Mis favoritos" para armar la cotización de la semana sin buscar producto por producto. Se guarda en el
-/// servidor (no en el celular): lo ve igual desde cualquier teléfono.
+/// Una presentación que el cliente marcó en el portal con el corazón: lo que pide siempre ("Camanejo · Saco 50 kg",
+/// no todo el Camanejo: el que compra sacos no quiere ver las bolsas). El portal tiene "Mis favoritos" para armar la
+/// cotización de la semana sin buscar uno por uno. Se guarda en el servidor: lo ve igual desde cualquier teléfono.
 /// </summary>
 public class ClienteFavorito
 {
@@ -74,8 +74,12 @@ public class ClienteFavorito
     public int ClienteId { get; set; }
     public Cliente? Cliente { get; set; }
 
+    /// <summary>El producto de la presentación (se guarda para no tener que buscarlo).</summary>
     public int ProductoId { get; set; }
     public Producto? Producto { get; set; }
+
+    public int PresentacionId { get; set; }
+    public ProductoPresentacion? Presentacion { get; set; }
 
     public DateTime Fecha { get; set; } = DateTime.UtcNow;
 }

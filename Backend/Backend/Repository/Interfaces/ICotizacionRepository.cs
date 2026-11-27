@@ -33,10 +33,11 @@ public interface ICotizacionRepository
 
     // ---------------------------------------------------------- Favoritos
 
+    /// <summary>Las presentaciones marcadas (ids), en el orden en que las marcó.</summary>
     Task<List<int>> FavoritosAsync(int clienteId);
 
-    /// <summary>Marca o desmarca; repetir la misma marca no hace nada.</summary>
-    Task MarcarFavoritoAsync(int clienteId, int productoId, bool favorito);
+    /// <summary>Marca o desmarca una presentación; repetir la misma marca no hace nada.</summary>
+    Task MarcarFavoritoAsync(int clienteId, int productoId, int presentacionId, bool favorito);
 
     // ------------------------------------------------------- Cotizaciones
 

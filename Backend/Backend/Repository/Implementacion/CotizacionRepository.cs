@@ -62,17 +62,22 @@ public class CotizacionRepository : ICotizacionRepository
     public Task<List<int>> FavoritosAsync(int clienteId) =>
         _context.ClienteFavoritos.AsNoTracking()
             .Where(f => f.ClienteId == clienteId)
-            .OrderBy(f => f.Fecha)
-            .Select(f => f.ProductoId)
+            .OrderBy(f => f.Fecha).ThenBy(f => f.Id)
+            .Select(f => f.PresentacionId)
             .ToListAsync();
 
-    public async Task MarcarFavoritoAsync(int clienteId, int productoId, bool favorito)
+    public async Task MarcarFavoritoAsync(int clienteId, int productoId, int presentacionId, bool favorito)
     {
         var existente = await _context.ClienteFavoritos
-            .FirstOrDefaultAsync(f => f.ClienteId == clienteId && f.ProductoId == productoId);
+            .FirstOrDefaultAsync(f => f.ClienteId == clienteId && f.PresentacionId == presentacionId);
         if (favorito && existente is null)
         {
-            await _context.ClienteFavoritos.AddAsync(new ClienteFavorito { ClienteId = clienteId, ProductoId = productoId });
+            await _context.ClienteFavoritos.AddAsync(new ClienteFavorito
+            {
+                ClienteId = clienteId,
+                ProductoId = productoId,
+                PresentacionId = presentacionId,
+            });
         }
         else if (!favorito && existente is not null)
         {

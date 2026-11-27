@@ -68,19 +68,16 @@ public class CotizacionService : ICotizacionService
         return await _repository.FavoritosAsync(acceso.ClienteId);
     }
 
-    public async Task<List<int>> MarcarFavoritoAsync(int productoId, bool favorito)
+    public async Task<List<int>> MarcarFavoritoAsync(int presentacionId, bool favorito)
     {
         var acceso = await _accesos.AccesoActualAsync();
-        // Solo se marca lo que el cliente puede ver: un producto del catálogo (activo, que se vende y con precio).
-        if (favorito)
-        {
-            var catalogo = await CatalogoDeAsync(acceso.Cliente!.ListaPrecioId);
-            if (catalogo.Productos.All(p => p.Id != productoId))
-            {
-                throw new NotFoundException("Ese producto no está en el catálogo.");
-            }
-        }
-        await _repository.MarcarFavoritoAsync(acceso.ClienteId, productoId, favorito);
+        // Solo se marca lo que el cliente puede ver: una presentación del catálogo (activa, que se vende y con precio).
+        // Desmarcar no lo exige: una que dejó de venderse también se tiene que poder quitar.
+        var catalogo = await CatalogoDeAsync(acceso.Cliente!.ListaPrecioId);
+        var producto = catalogo.Productos.FirstOrDefault(p => p.Presentaciones.Any(pr => pr.Id == presentacionId));
+        if (producto is null && favorito) throw new NotFoundException("Esa presentación no está en el catálogo.");
+
+        await _repository.MarcarFavoritoAsync(acceso.ClienteId, producto?.Id ?? 0, presentacionId, favorito);
         return await _repository.FavoritosAsync(acceso.ClienteId);
     }
 
